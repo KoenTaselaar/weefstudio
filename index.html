@@ -85,7 +85,7 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 }
 .staal.actief{ outline:3px solid #000; outline-offset:2px; }
 .staal .nul{ position:absolute; right:1px; bottom:0; font-size:8px; color:#fff; mix-blend-mode:difference; }
-#paletbalk .uitleg{ font-size:10px; color:#444; margin-left:auto; max-width:170px; }
+#paletbalk .uitleg{ font-size:10px; color:#444; margin-left:auto; max-width:250px; }
 
 #statusbalk{ border-top:2px solid #808080; padding:3px 8px; font-size:11px; color:#222; flex:0 0 auto; background:var(--chrome); display:flex; gap:14px; flex-wrap:wrap; }
 
@@ -143,6 +143,16 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 #patPalet button.actief{ outline:3px solid #000; outline-offset:1px; }
 #patTabs{ display:flex; gap:4px; }
 #patPreview{ width:128px; height:128px; image-rendering:pixelated; border:1px solid #666; background:#fff; }
+
+/* kleur-flits van de vasthoud-pipet */
+#pipetFlits{
+  position:fixed; top:max(70px, calc(env(safe-area-inset-top) + 60px)); left:50%;
+  width:64px; height:64px; margin-left:-32px; border-radius:50%;
+  border:4px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,.45);
+  z-index:60; opacity:0; transform:scale(.6); pointer-events:none;
+  transition:opacity .15s, transform .15s;
+}
+#pipetFlits.zichtbaar{ opacity:1; transform:scale(1); }
 
 /* garens (kleurtelling) */
 #garensLijst{ display:flex; flex-direction:column; gap:5px; }
@@ -206,7 +216,7 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <button class="btn werktuig" data-tool="strepenV">☷<small>strepen</small></button>
     <button class="btn werktuig" data-tool="eigenpat">✎▦<small>eigen patr.</small></button>
     <button class="btn" id="kPatroonEdit" style="grid-column:1/3;">✏️ patroon bewerken</button>
-    <div class="kopje">dikte</div>
+    <div class="kopje">dikte — ook de korrel van spuit, glitter, emmer en meng</div>
     <button class="btn maat" data-maat="1">·</button>
     <button class="btn maat actief" data-maat="2">•</button>
     <button class="btn maat" data-maat="4">●</button>
@@ -250,12 +260,13 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
   <button class="btn" id="kKleurPlus">＋</button>
   <button class="btn" id="kKleurMin">－</button>
   <button class="btn" id="kKleurBewerk">🎨</button>
-  <span class="uitleg">tik = kiezen · nogmaals tikken = kleur aanpassen (garenwissel: alle pixels veranderen mee)</span>
+  <span class="uitleg">tik = kiezen · nogmaals = kleur aanpassen (garenwissel) · ✌️ 2-vingertik = ongedaan, 3 vingers = opnieuw · stift stilhouden = kleur oppikken</span>
 </div>
 
 <div id="statusbalk">
-  <span id="stMaat"></span><span id="stCm"></span><span id="stZoom"></span><span id="stLaag"></span>
+  <span id="stMaat"></span><span id="stCm"></span><span id="stZoom"></span><span id="stLaag"></span><span id="stModi" style="font-weight:bold;"></span>
 </div>
+<div id="pipetFlits"></div>
 
 <!-- dialoog: nieuw kleed -->
 <div class="sluier" id="nieuwSluier">
@@ -791,10 +802,18 @@ function nlGetal(v, dec=1){ return v.toFixed(dec).replace('.', ','); }
 let statusSleutel = '';
 function statusBij(){
   if(!doc) return;
+  // welke stille standen staan er aan? (anders vergeet je dat meng aanstaat)
+  const modi = [];
+  if(doc.meng) modi.push('▚ meng');
+  if(doc.spiegelX) modi.push('⇋ spiegel');
+  if(doc.spiegelY) modi.push('⇵ spiegel');
+  if(doc.gevuld) modi.push('▮ gevuld');
+  const modiTekst = modi.join(' · ');
   // niet elk frame vijf DOM-teksten herschrijven als er niets veranderde
-  const sleutel = doc.w+'/'+doc.h+'/'+doc.lagen.length+'/'+doc.pxcm+'/'+Math.round(doc.schaal*100)+'/'+doc.actief+'/'+actieveLaag().naam+'/'+doc.naam;
+  const sleutel = doc.w+'/'+doc.h+'/'+doc.lagen.length+'/'+doc.pxcm+'/'+Math.round(doc.schaal*100)+'/'+doc.actief+'/'+actieveLaag().naam+'/'+doc.naam+'/'+modiTekst;
   if(sleutel === statusSleutel) return;
   statusSleutel = sleutel;
+  document.getElementById('stModi').textContent = modiTekst;
   document.getElementById('stMaat').textContent = doc.w+' × '+doc.h+' px · '+doc.lagen.length+' lagen';
   document.getElementById('stCm').textContent =
     nlGetal(doc.w/doc.pxcm)+' × '+nlGetal(doc.h/doc.pxcm)+' cm bij '+nlGetal(doc.pxcm,2).replace(',00','')+' px/cm';
@@ -836,9 +855,17 @@ function bboxVoeg(b, x, y){
 let strokeBbox = bboxUit();   // alles wat deze haal raakte (voor ongedaan)
 let moveBbox = null;          // alles wat déze beweging raakte (voor voorvertoning)
 
+// de korrel: de gekozen dikte, gebruikt als rastervaste blokmaat door
+// spuitbus, glitter, glitteremmer en het mengraster
+function korrel(){ return Math.max(1, doc.maat); }
+
 function zetPixel(x, y, kleur){
   if(x<0 || x>=doc.w || y<0 || y>=doc.h) return;
-  if(doc.meng && ((x+y)&1)) return;              // om-en-om: 50/50 garenmix
+  if(doc.meng){
+    // om-en-om 50/50 garenmix — in blokken van de korrel (dikte 1 = per pixel)
+    const K = korrel();
+    if((Math.floor(x/K) + Math.floor(y/K)) & 1) return;
+  }
   if(tekenPatroon){
     if(tekenPatroon.eigen){
       const v = tekenPatroon.p[((y&7)<<3)|(x&7)];
@@ -939,11 +966,28 @@ function ellipsGevuld(x0,y0,x1,y1,kleur){
   }
 }
 
+/* een rastervast korrelblok stempelen: het K×K-blok waar (x,y) in valt.
+   Doordat de blokken op het doekraster liggen sluiten losse pufjes netjes
+   op elkaar aan — zoals alles hier dat gespikkeld is. */
+function stempelKorrel(x, y, kleur){
+  const K = korrel();
+  const zet = (cx,cy)=>{
+    const bx = Math.floor(cx/K)*K, by = Math.floor(cy/K)*K;
+    for(let dy=0;dy<K;dy++) for(let dx=0;dx<K;dx++) zetPixel(bx+dx, by+dy, kleur);
+  };
+  zet(x,y);
+  if(doc.spiegelX) zet(doc.w-1-x, y);
+  if(doc.spiegelY) zet(x, doc.h-1-y);
+  if(doc.spiegelX && doc.spiegelY) zet(doc.w-1-x, doc.h-1-y);
+}
+
 function spuitPuf(x,y,maat,kleur){
-  const straal = maat*2+3, n = 5+maat*4;
+  const straal = maat*2+3;
+  // grotere korrels dekken sneller, dus minder spikkels per puf
+  const n = Math.max(3, Math.round((5+maat*4)/korrel()));
   for(let i=0;i<n;i++){
     const hoek = Math.random()*Math.PI*2, afst = Math.random()*straal;
-    stempel(Math.round(x+Math.cos(hoek)*afst), Math.round(y+Math.sin(hoek)*afst), 1, kleur);
+    stempelKorrel(Math.round(x+Math.cos(hoek)*afst), Math.round(y+Math.sin(hoek)*afst), kleur);
   }
 }
 function regenboogKleuren(){ return doc.palet.map((_,i)=>i).slice(1); }
@@ -954,10 +998,12 @@ function volgendeRegenboog(){
 }
 function glitterPuf(x,y){
   const kleuren = regenboogKleuren();
-  for(let i=0;i<6;i++){
-    const hoek = Math.random()*Math.PI*2, afst = Math.random()*6;
-    stempel(Math.round(x+Math.cos(hoek)*afst), Math.round(y+Math.sin(hoek)*afst), 1,
-            kleuren[Math.floor(Math.random()*kleuren.length)]);
+  const K = korrel();
+  const n = Math.max(3, Math.round(6/Math.sqrt(K))+1);
+  for(let i=0;i<n;i++){
+    const hoek = Math.random()*Math.PI*2, afst = Math.random()*(3+K*3);
+    stempelKorrel(Math.round(x+Math.cos(hoek)*afst), Math.round(y+Math.sin(hoek)*afst),
+                  kleuren[Math.floor(Math.random()*kleuren.length)]);
   }
 }
 
@@ -982,7 +1028,7 @@ function vloedVul(x, y, maakKleur){
   const start = y*w+x, oud = data[start];
   const kleurVoor = maakKleur(oud);
   if(!kleurVoor) return false;
-  const meng = doc.meng;
+  const meng = doc.meng, K = korrel();
   /* Scanline-vulling: hele horizontale banen tegelijk afwerken en per
      aangrenzende baan hooguit één startpunt op de stapel zetten. De stapel
      blijft dan duizenden keren kleiner dan bij pixel-voor-pixel vullen —
@@ -998,9 +1044,9 @@ function vloedVul(x, y, maakKleur){
     let x0 = i - rij, x1 = x0;
     while(x0>0   && !bezocht[rij+x0-1] && data[rij+x0-1]===oud){ x0--; bezocht[rij+x0]=1; }
     while(x1<w-1 && !bezocht[rij+x1+1] && data[rij+x1+1]===oud){ x1++; bezocht[rij+x1]=1; }
+    const mengRij = Math.floor(py/K);   // mengraster in korrelblokken, net als de stiften
     for(let xx=x0; xx<=x1; xx++){
-      // meng doet hier hetzelfde als bij de stiften: om-en-om overslaan
-      if(!(meng && ((xx+py)&1))) data[rij+xx] = kleurVoor();
+      if(!(meng && ((Math.floor(xx/K) + mengRij) & 1))) data[rij+xx] = kleurVoor(xx, py);
     }
     maakVuil(x0, py); maakVuil(x1, py);
     bboxVoeg(strokeBbox, x0, py); bboxVoeg(strokeBbox, x1, py);
@@ -1030,9 +1076,19 @@ function glitterEmmer(x, y){
     const trio = [...new Set([doc.kleur, k2, k3])];
     if(trio.length===1 && oud===trio[0]) return null;
     let stok = [];
-    return ()=>{
+    const trek = ()=>{
       if(!stok.length) stok = trio.slice().sort(()=>Math.random()-0.5);
       return stok.pop();
+    };
+    const K = korrel();
+    if(K === 1) return trek;               // per pixel: geen blokadministratie nodig
+    // grovere korrel: één kleur per K×K-blok, kaartspel-eerlijk verdeeld
+    const blokken = new Map();
+    return (px,py)=>{
+      const sleutel = Math.floor(py/K)*65536 + Math.floor(px/K);
+      let k = blokken.get(sleutel);
+      if(k === undefined){ k = trek(); blokken.set(sleutel, k); }
+      return k;
     };
   });
 }
@@ -1140,6 +1196,8 @@ const wijzers = new Map();
 let haal = null;
 let knijp = null;
 let spuitTimer = null;
+let multiTik = null;    // kandidaat voor twee-/drievinger-tik (undo/redo)
+let drukTimer = null;   // vasthoud-pipet: stift stilhouden = kleur oppikken
 
 function schermNaarRaster(e){
   const r = weergave.getBoundingClientRect();
@@ -1166,6 +1224,14 @@ weergave.addEventListener('pointerdown', e=>{
   if(e.pointerType==='touch'){
     // palm rejection: tekent de Pencil, dan doen rustende vingers niets
     if(haal && haal.type==='pen') return;
+    if(aanraak.length >= 2){
+      // kan een korte twee-/drievinger-tik worden: undo/redo (à la Procreate)
+      if(!multiTik) multiTik = {n:0, t0:Date.now(), bewogen:false,
+                                schaal0:doc.schaal, offx0:doc.offx, offy0:doc.offy};
+      multiTik.n = Math.max(multiTik.n, aanraak.length);
+    }else{
+      multiTik = null;
+    }
     if(aanraak.length === 2){
       if(haal) haalAfbreken();
       const [a,b] = aanraak;
@@ -1243,6 +1309,25 @@ weergave.addEventListener('pointerdown', e=>{
   }else if(t!=='schuif'){
     stempel(x,y,maat,kleur,kwast);
   }
+  /* Vasthoud-pipet: de stift even stilhouden pikt de kleur onder je punt op
+     (de beginstip verdwijnt weer). Niet bij spuitbus/glitter — daar hoort
+     stilhouden juist bij — en niet bij het schuiven van de laag. */
+  if(t!=='spuit' && t!=='glitter' && t!=='schuif'){
+    haal.startSX = e.clientX; haal.startSY = e.clientY;
+    clearTimeout(drukTimer);
+    drukTimer = setTimeout(()=>{
+      drukTimer = null;
+      if(!haal || haal.id !== e.pointerId) return;
+      const px = haal.vx, py = haal.vy;
+      haalAfbreken();
+      verzekerComposiet();
+      if(px>=0 && py>=0 && px<doc.w && py<doc.h){
+        doc.kleur = samenIdx[py*doc.w+px];
+        bouwStalen();
+        pipetFlits(doc.palet[doc.kleur]);
+      }
+    }, 600);
+  }
   vraagTeken();
 });
 
@@ -1257,6 +1342,9 @@ weergave.addEventListener('pointermove', e=>{
       const [a,b] = aanraak;
       const d = Math.hypot(a.x-b.x, a.y-b.y) || 1;
       const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      // echt geknepen/geschoven? dan is het geen tik meer
+      if(multiTik && (Math.abs(d/knijp.d0 - 1) > 0.06 || Math.hypot(mx-knijp.mx0, my-knijp.my0) > 14))
+        multiTik.bewogen = true;
       let s = Math.max(0.04, Math.min(40, knijp.schaal0 * d/knijp.d0));
       const f = s/knijp.schaal0;
       doc.schaal = s;
@@ -1274,6 +1362,10 @@ weergave.addEventListener('pointermove', e=>{
     haal.x = e.clientX; haal.y = e.clientY;
     vraagTeken();
     return;
+  }
+  // echt gaan tekenen? dan is het geen vasthoud-pipet meer
+  if(drukTimer && Math.hypot(e.clientX-haal.startSX, e.clientY-haal.startSY) > 9){
+    clearTimeout(drukTimer); drukTimer = null;
   }
   const stappen = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
   for(const ev of stappen){
@@ -1329,8 +1421,18 @@ weergave.addEventListener('pointermove', e=>{
   vraagTeken();
 });
 
+// een korte kleur-flits bovenin als de vasthoud-pipet een kleur oppikt
+function pipetFlits(hex){
+  const f = document.getElementById('pipetFlits');
+  f.style.background = hex;
+  f.classList.add('zichtbaar');
+  clearTimeout(pipetFlits._t);
+  pipetFlits._t = setTimeout(()=>f.classList.remove('zichtbaar'), 800);
+}
+
 // haal afbreken (tweede vinger erbij = knijpzoom): alles terugzetten
 function haalAfbreken(){
+  clearTimeout(drukTimer); drukTimer = null;
   clearInterval(spuitTimer);
   tekenPatroon = null;
   if(haal && haal.soort!=='pan' && haal.voor){
@@ -1343,10 +1445,12 @@ function haalAfbreken(){
 }
 // hard stoppen zonder terugdraaien — bij documentwissels
 function haalStop(){
+  clearTimeout(drukTimer); drukTimer = null;
   clearInterval(spuitTimer);
   tekenPatroon = null;
   haal = null;
   knijp = null;
+  multiTik = null;
 }
 
 // de lopende haal afronden: ongedaan-stap vastleggen en opruimen
@@ -1365,9 +1469,22 @@ function haalCommit(){
   haal = null;
 }
 function wijzerLos(e){
+  clearTimeout(drukTimer); drukTimer = null;
   wijzers.delete(e.pointerId);
   const aanraak = [...wijzers.values()].filter(p=>p.type==='touch');
   if(knijp && aanraak.length < 2) knijp = null;
+  if(e.type === 'pointercancel') multiTik = null;   // systeemgebaar: geen tik
+  if(multiTik && e.pointerType==='touch' && aanraak.length === 0){
+    const mt = multiTik;
+    multiTik = null;
+    if(!mt.bewogen && Date.now()-mt.t0 < 350){
+      // korte twee-vingertik = ongedaan, drie vingers = opnieuw;
+      // het minieme knijp-gejitter van de tik zelf eerst terugdraaien
+      doc.schaal = mt.schaal0; doc.offx = mt.offx0; doc.offy = mt.offy0;
+      if(mt.n === 2) ongedaan(); else opnieuw();
+      vraagTeken();
+    }
+  }
   if(haal && haal.id === e.pointerId){
     haalCommit();
     vraagTeken();
@@ -1436,10 +1553,10 @@ function knoppenBij(){
   el('dekLabel').textContent = dekPct(actieveLaag().dek);
 }
 
-el('kGevuld').addEventListener('click', ()=>{ doc.gevuld=!doc.gevuld; knoppenBij(); bewaarStraks(); });
-el('kMeng').addEventListener('click', ()=>{ doc.meng=!doc.meng; knoppenBij(); bewaarStraks(); });
-el('kSpiegelX').addEventListener('click', ()=>{ doc.spiegelX=!doc.spiegelX; knoppenBij(); bewaarStraks(); });
-el('kSpiegelY').addEventListener('click', ()=>{ doc.spiegelY=!doc.spiegelY; knoppenBij(); bewaarStraks(); });
+el('kGevuld').addEventListener('click', ()=>{ doc.gevuld=!doc.gevuld; knoppenBij(); statusBij(); bewaarStraks(); });
+el('kMeng').addEventListener('click', ()=>{ doc.meng=!doc.meng; knoppenBij(); statusBij(); bewaarStraks(); });
+el('kSpiegelX').addEventListener('click', ()=>{ doc.spiegelX=!doc.spiegelX; knoppenBij(); statusBij(); bewaarStraks(); });
+el('kSpiegelY').addEventListener('click', ()=>{ doc.spiegelY=!doc.spiegelY; knoppenBij(); statusBij(); bewaarStraks(); });
 el('kRaster').addEventListener('click', ()=>{ doc.raster=!doc.raster; knoppenBij(); vraagTeken(); });
 el('kWeef').addEventListener('click', ()=>{ weefAan=!weefAan; knoppenBij(); vraagTeken(); });
 el('kKaart').addEventListener('click', ()=>{ kaartAan=!kaartAan; knoppenBij(); vraagTeken(); });
