@@ -470,6 +470,7 @@ function nieuwDoc(w, h, pxcm, palet, naam){
     lagen: [ nieuweLaag('achtergrond', w, h), nieuweLaag('laag 1', w, h) ],
     actief: 1,
     patronen: [ new Uint8Array(64).fill(LEEG), new Uint8Array(64).fill(LEEG), new Uint8Array(64).fill(LEEG) ],
+    trios: [],                       // gebruikte glittervul-drietallen (voor her-vullen)
     tool:'pen', maat:2, kleur:1, kwast:'vierkant',
     gevuld:false, meng:false, spiegelX:false, spiegelY:false,
     patSlot:0, rbI:0,
@@ -1022,10 +1023,14 @@ function verschuifVanBron(L, bron, dx, dy){
 /* Vlakvulling (emmer en glitteremmer) op de actieve laag.
    Vult het aaneengesloten gebied met dezelfde laag-waarde (ook "leeg" telt
    als waarde — zo vul je een leeg stuk van een laag zonder eronder te kijken). */
-function vloedVul(x, y, maakKleur){
+function vloedVul(x, y, maakKleur, waardenSet){
   if(x<0||y<0||x>=doc.w||y>=doc.h) return false;
   const w=doc.w, h=doc.h, data=tekenData;
   const start = y*w+x, oud = data[start];
+  // waardenSet: meerdere kleuren tellen als één vlak (voor het her-vullen van
+  // een eerder ge-glitterd gebied) — maar alleen als de klik er echt in valt
+  if(waardenSet && !waardenSet.has(oud)) waardenSet = null;
+  const past = waardenSet ? (v=>waardenSet.has(v)) : (v=>v===oud);
   const kleurVoor = maakKleur(oud);
   if(!kleurVoor) return false;
   const meng = doc.meng, K = korrel();
@@ -1042,8 +1047,8 @@ function vloedVul(x, y, maakKleur){
     const i = stapel.pop();
     const py = (i/w)|0, rij = py*w;
     let x0 = i - rij, x1 = x0;
-    while(x0>0   && !bezocht[rij+x0-1] && data[rij+x0-1]===oud){ x0--; bezocht[rij+x0]=1; }
-    while(x1<w-1 && !bezocht[rij+x1+1] && data[rij+x1+1]===oud){ x1++; bezocht[rij+x1]=1; }
+    while(x0>0   && !bezocht[rij+x0-1] && past(data[rij+x0-1])){ x0--; bezocht[rij+x0]=1; }
+    while(x1<w-1 && !bezocht[rij+x1+1] && past(data[rij+x1+1])){ x1++; bezocht[rij+x1]=1; }
     const mengRij = Math.floor(py/K);   // mengraster in korrelblokken, net als de stiften
     for(let xx=x0; xx<=x1; xx++){
       if(!(meng && ((Math.floor(xx/K) + mengRij) & 1))) data[rij+xx] = kleurVoor(xx, py);
@@ -1055,11 +1060,11 @@ function vloedVul(x, y, maakKleur){
       const nrij = ny*w;
       for(let xx=x0; xx<=x1; xx++){
         const j = nrij+xx;
-        if(!bezocht[j] && data[j]===oud){
+        if(!bezocht[j] && past(data[j])){
           bezocht[j] = 1;
           stapel.push(j);
           // de rest van deze aaneengesloten baan hoort bij hetzelfde startpunt
-          while(xx<x1 && !bezocht[nrij+xx+1] && data[nrij+xx+1]===oud) xx++;
+          while(xx<x1 && !bezocht[nrij+xx+1] && past(data[nrij+xx+1])) xx++;
         }
       }
     }
@@ -1070,11 +1075,25 @@ function vloedVul(x, y, maakKleur){
 function emmer(x, y, kleur){
   return vloedVul(x, y, (oud)=> oud===kleur ? null : (()=>kleur));
 }
+function onthoudTrio(trio){
+  // welke drietallen garens vormden samen een glittervlak? (voor her-vullen)
+  doc.trios = (doc.trios||[]).filter(t=>t.join()!==trio.join());
+  doc.trios.push(trio.slice());
+  while(doc.trios.length > 12) doc.trios.shift();
+}
 function glitterEmmer(x, y){
-  return vloedVul(x, y, (oud)=>{
-    const k2 = volgendePaletKleur(doc.kleur), k3 = volgendePaletKleur(k2);
-    const trio = [...new Set([doc.kleur, k2, k3])];
-    if(trio.length===1 && oud===trio[0]) return null;
+  const k2 = volgendePaletKleur(doc.kleur), k3 = volgendePaletKleur(k2);
+  const trio = [...new Set([doc.kleur, k2, k3])];
+  /* Klik je in een eerder ge-glitterd vlak, dan telt dat hele gemengde vlak
+     als één gebied — anders sijpelt de nieuwe vulling alleen door de blokjes
+     van de aangeklikte kleur en wisselt het oude vlak vlekkerig mee. */
+  let waardenSet = null;
+  const v0 = (x>=0 && y>=0 && x<doc.w && y<doc.h) ? tekenData[y*doc.w+x] : LEEG;
+  for(let i=(doc.trios||[]).length-1; i>=0; i--){
+    if(doc.trios[i].includes(v0)){ waardenSet = new Set(doc.trios[i]); break; }
+  }
+  const gelukt = vloedVul(x, y, (oud)=>{
+    if(trio.length===1 && oud===trio[0] && !waardenSet) return null;
     let stok = [];
     const trek = ()=>{
       if(!stok.length) stok = trio.slice().sort(()=>Math.random()-0.5);
@@ -1090,7 +1109,9 @@ function glitterEmmer(x, y){
       if(k === undefined){ k = trek(); blokken.set(sleutel, k); }
       return k;
     };
-  });
+  }, waardenSet);
+  if(gelukt) onthoudTrio(trio);
+  return gelukt;
 }
 
 /* ---------- ongedaan maken: alleen de verschillen bewaren ----------
@@ -1287,7 +1308,14 @@ weergave.addEventListener('pointerdown', e=>{
   const kwast = (t==='gum') ? 'vierkant' : (doc.kwast||'vierkant');
   haal = {soort:t, type:e.pointerType, id:e.pointerId, vx:x, vy:y, sx:x, sy:y, kleur, maat, kwast,
           laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0};
-  if(t==='verloop'){ haal.kleurA = doc.kleur; haal.kleurB = volgendePaletKleur(); haal.kleur = haal.kleurA; haal.afstand = 0; }
+  if(t==='verloop'){
+    // reist eindeloos door het hele palet, beginnend bij de gekozen kleur
+    haal.kleuren = regenboogKleuren();
+    const vIdx = haal.kleuren.indexOf(doc.kleur);
+    haal.beginI = vIdx >= 0 ? vIdx : 0;
+    haal.kleur = haal.kleuren[haal.beginI];
+    haal.afstand = 0;
+  }
   if(t==='stippel'){ haal.stap = 0; }
   if(BINDING_TOOLS.includes(t)){ tekenPatroon = {f:BINDINGEN[t], a:doc.kleur, b:volgendePaletKleur()}; }
   if(t==='eigenpat'){ tekenPatroon = {eigen:true, p:doc.patronen[doc.patSlot]}; }
@@ -1393,10 +1421,16 @@ weergave.addEventListener('pointermove', e=>{
     }else if(s==='glitter'){
       glitterPuf(x, y);
     }else if(s==='verloop'){
+      // gespikkelde overgang die eindeloos doorreist: A→B→C→…→weer A
       if(x===haal.vx && y===haal.vy) continue;
       haal.afstand += Math.hypot(x-haal.vx, y-haal.vy);
-      const t2 = Math.min(1, haal.afstand / Math.max(30, doc.w*0.25));
-      const kleur = Math.random() < t2 ? haal.kleurB : haal.kleurA;
+      const L2 = Math.max(60, doc.pxcm*10);          // ± 10 cm per kleurovergang
+      const p = haal.afstand / L2;
+      const nKl = haal.kleuren.length;
+      const i0 = (haal.beginI + Math.floor(p)) % nKl;
+      const i1 = (i0 + 1) % nKl;
+      const t2 = p - Math.floor(p);
+      const kleur = Math.random() < t2 ? haal.kleuren[i1] : haal.kleuren[i0];
       lijn(haal.vx, haal.vy, x, y, haal.maat, kleur, haal.kwast);
     }else if(s==='stippel'){
       if(x===haal.vx && y===haal.vy) continue;
@@ -2115,6 +2149,7 @@ function herstelDoc(o){
   d.patronen = (d.patronen && d.patronen.length===3) ? d.patronen
              : [new Uint8Array(64).fill(LEEG), new Uint8Array(64).fill(LEEG), new Uint8Array(64).fill(LEEG)];
   d.patronen = d.patronen.map(p=> p instanceof Uint8Array ? p : new Uint8Array(p));
+  d.trios = d.trios || [];
   d.lagen.forEach(l=>{ if(!(l.data instanceof Uint8Array)) l.data = new Uint8Array(l.data); });
   if(d.actief===undefined || d.actief>=d.lagen.length) d.actief = d.lagen.length-1;
   d.tool = d.tool || 'pen'; d.maat = d.maat || 2; d.kwast = d.kwast || 'vierkant';
@@ -2219,6 +2254,7 @@ el('kProject').addEventListener('click', ()=>{
     w:doc.w, h:doc.h, pxcm:doc.pxcm, naam:doc.naam, palet:doc.palet,
     lagen: doc.lagen.map(l=>({naam:l.naam, zicht:l.zicht, dek:l.dek, data:b64(l.data)})),
     patronen: doc.patronen.map(p=>b64(p)),
+    trios: doc.trios || [],
   };
   deelOfDownload(new File([JSON.stringify(o)], veiligeNaam()+'.weefstudio.json', {type:'application/json'}));
 });
@@ -2243,6 +2279,7 @@ bestandInvoer.addEventListener('change', ()=>{
       d.lagen = o.lagen.map(l=>({id:++laagTeller, naam:l.naam, zicht:l.zicht!==false, dek:l.dek||64, data:unb64(l.data, o.w*o.h)}));
       d.actief = d.lagen.length-1;
       if(o.patronen) d.patronen = o.patronen.map(p=>unb64(p, 64));
+      d.trios = o.trios || [];
       doc = herstelDoc(d);
       naDocWissel();
     }).catch(()=>melding('Dit projectbestand kan niet gelezen worden.'));
