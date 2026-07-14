@@ -21,6 +21,10 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
   display:inline-flex; align-items:center; justify-content:center; gap:4px; touch-action:manipulation; color:#000;
 }
 .btn:active, .btn.actief{ border-color:var(--donker) var(--licht) var(--licht) var(--donker); background:#d8d8d8; }
+/* de actieve keuze duidelijk blauw — op een fel iPad-scherm is het ingedrukte
+   randje alleen te subtiel om in één oogopslag te zien wat aanstaat */
+.werktuig.actief, .maat.actief, .kwast.actief,
+#kGevuld.actief, #kMeng.actief, #kSpiegelX.actief, #kSpiegelY.actief{ background:#9fbede; }
 
 #titelbalk{
   background:linear-gradient(90deg, var(--blauw1), var(--blauw2)); color:#fff; padding:5px 10px;
@@ -32,6 +36,18 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 
 #menubalk{ display:flex; flex-wrap:wrap; gap:4px; padding:4px 6px; border-bottom:2px solid #808080; flex:0 0 auto; align-items:center; }
 #menubalk .scheiding{ width:2px; height:32px; background:#808080; border-right:1px solid #fff; margin:0 3px; }
+
+/* altijd-zichtbare optiebalk: dikte, kwastvorm en standen — geen scrollen meer
+   om bij de dikte te komen. Loopt bij smalle iPad horizontaal door (swipe). */
+#optiebalk{ display:flex; align-items:center; gap:4px; padding:4px 6px; border-bottom:2px solid #808080;
+  flex:0 0 auto; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+#optiebalk .scheiding{ width:2px; height:36px; background:#808080; border-right:1px solid #fff; margin:0 4px; flex:0 0 auto; }
+#optiebalk .kop{ font-size:9px; color:#333; margin-right:2px; white-space:nowrap; flex:0 0 auto; }
+#optiebalk .btn{ min-width:42px; height:42px; font-size:17px; flex-direction:column; padding:2px; gap:0; flex:0 0 auto; }
+#optiebalk .btn small{ font-size:8px; }
+#optiebalk .maat{ font-size:20px; }
+#kwastVoorbeeld{ width:44px; height:42px; flex:0 0 auto; border:2px solid; image-rendering:pixelated;
+  border-color:var(--donker) var(--licht) var(--licht) var(--donker); background:#fff; }
 
 #midden{ flex:1; display:flex; min-height:0; }
 
@@ -190,6 +206,28 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
   <button class="btn" id="kGarens" title="garentelling">🧶 garens</button>
 </div>
 
+<div id="optiebalk">
+  <canvas id="kwastVoorbeeld" width="44" height="42" title="zo groot tekent je stift nu"></canvas>
+  <span class="kop">dikte</span>
+  <button class="btn maat" data-maat="1">·</button>
+  <button class="btn maat actief" data-maat="2">•</button>
+  <button class="btn maat" data-maat="4">●</button>
+  <button class="btn maat" data-maat="8">⬤</button>
+  <button class="btn maat" data-maat="12">⬤+</button>
+  <button class="btn maat" data-maat="20">⬤++</button>
+  <div class="scheiding"></div>
+  <span class="kop">kwast</span>
+  <button class="btn kwast actief" data-kwast="vierkant">■<small>blok</small></button>
+  <button class="btn kwast" data-kwast="rond">⚫<small>rond</small></button>
+  <button class="btn kwast" data-kwast="schuin1">╱<small>schuin</small></button>
+  <button class="btn kwast" data-kwast="schuin2">╲<small>schuin</small></button>
+  <div class="scheiding"></div>
+  <button class="btn" id="kGevuld" title="rechthoek/cirkel gevuld tekenen">▮<small>gevuld</small></button>
+  <button class="btn" id="kMeng" title="om-en-om pixels: 50/50 garenmix">▚<small>meng</small></button>
+  <button class="btn" id="kSpiegelX" title="links-rechts spiegelen">⇋<small>spiegel</small></button>
+  <button class="btn" id="kSpiegelY" title="boven-onder spiegelen">⇵<small>spiegel</small></button>
+</div>
+
 <div id="midden">
   <div id="gereedschap">
     <button class="btn werktuig actief" data-tool="pen">✏️<small>potlood</small></button>
@@ -217,23 +255,6 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <button class="btn werktuig" data-tool="strepenV">☷<small>strepen</small></button>
     <button class="btn werktuig" data-tool="eigenpat">✎▦<small>eigen patr.</small></button>
     <button class="btn" id="kPatroonEdit" style="grid-column:1/3;">✏️ patroon bewerken</button>
-    <div class="kopje">dikte — ook de korrel van spuit, glitter, emmer en meng</div>
-    <button class="btn maat" data-maat="1">·</button>
-    <button class="btn maat actief" data-maat="2">•</button>
-    <button class="btn maat" data-maat="4">●</button>
-    <button class="btn maat" data-maat="8">⬤</button>
-    <button class="btn maat" data-maat="12">⬤+</button>
-    <button class="btn maat" data-maat="20">⬤++</button>
-    <div class="kopje">kwastvorm</div>
-    <button class="btn kwast actief" data-kwast="vierkant">■<small>blok</small></button>
-    <button class="btn kwast" data-kwast="rond">⚫<small>rond</small></button>
-    <button class="btn kwast" data-kwast="schuin1">╱<small>schuin</small></button>
-    <button class="btn kwast" data-kwast="schuin2">╲<small>schuin</small></button>
-    <div class="kopje">extra</div>
-    <button class="btn" id="kGevuld" title="rechthoek/cirkel gevuld tekenen">▮<small>gevuld</small></button>
-    <button class="btn" id="kMeng" title="om-en-om pixels: 50/50 garenmix">▚<small>meng</small></button>
-    <button class="btn" id="kSpiegelX" title="links-rechts spiegelen">⇋<small>spiegel</small></button>
-    <button class="btn" id="kSpiegelY" title="boven-onder spiegelen">⇵<small>spiegel</small></button>
   </div>
   <div id="canvasvak">
     <canvas id="weergave"></canvas>
@@ -1553,6 +1574,7 @@ function el(id){ return document.getElementById(id); }
 function zetTool(t){
   doc.tool = t;
   document.querySelectorAll('.werktuig').forEach(b=>b.classList.toggle('actief', b.dataset.tool===t));
+  kwastVoorbeeld();
 }
 document.querySelectorAll('.werktuig').forEach(b=>{
   b.addEventListener('click', ()=>{ if(doc) zetTool(b.dataset.tool); });
@@ -1562,6 +1584,7 @@ document.querySelectorAll('.maat').forEach(b=>{
     if(!doc) return;
     doc.maat = +b.dataset.maat;
     document.querySelectorAll('.maat').forEach(x=>x.classList.toggle('actief', x===b));
+    kwastVoorbeeld();
   });
 });
 document.querySelectorAll('.kwast').forEach(b=>{
@@ -1569,8 +1592,38 @@ document.querySelectorAll('.kwast').forEach(b=>{
     if(!doc) return;
     doc.kwast = b.dataset.kwast;
     document.querySelectorAll('.kwast').forEach(x=>x.classList.toggle('actief', x===b));
+    kwastVoorbeeld();
   });
 });
+
+/* Live kwast-voorbeeld in de optiebalk: laat zien hoe groot en welke vorm de
+   stift nu neerzet — de korrelblokjes van spuit/glitter/emmer meegerekend.
+   Zo zie je de dikte vóór je tekent. */
+const kwastVbCanvas = document.getElementById('kwastVoorbeeld');
+const kwastVbCtx = kwastVbCanvas.getContext('2d');
+function kwastVoorbeeld(){
+  if(!doc) return;
+  const W = kwastVbCanvas.width, H = kwastVbCanvas.height;
+  kwastVbCtx.clearRect(0,0,W,H);
+  kwastVbCtx.fillStyle = '#fff'; kwastVbCtx.fillRect(0,0,W,H);
+  const kleurTool = (doc.tool==='gum') ? 0 : doc.kleur;
+  kwastVbCtx.fillStyle = doc.palet[kleurTool] || '#000';
+  const korrelTools = ['spuit','glitter','glittervul','vul'];
+  const isKorrel = korrelTools.includes(doc.tool);
+  // footprint: bij gewone stiften de kwastvorm, bij korrel-gereedschap een blok
+  const maat = Math.max(1, doc.maat);
+  const offs = isKorrel
+    ? (()=>{ const l=[]; for(let y=0;y<maat;y++)for(let x=0;x<maat;x++)l.push([x,y]); return l; })()
+    : kwastOffsets(doc.kwast||'vierkant', maat);
+  // schaal zodat de grootste dikte (20) net in het vakje past
+  const p = Math.max(1, Math.floor(Math.min(W,H)/22));
+  const cx = W/2, cy = H/2, half = (maat-1)/2;
+  for(const [dx,dy] of offs){
+    const bx = Math.round(cx+(dx-half)*p), by = Math.round(cy+(dy-half)*p);
+    if(doc.meng && ((dx+dy)&1)) continue;   // mengstand: om-en-om weglaten
+    kwastVbCtx.fillRect(bx, by, p, p);
+  }
+}
 
 function knoppenBij(){
   if(!doc) return;
@@ -1586,6 +1639,7 @@ function knoppenBij(){
   document.querySelectorAll('.kwast').forEach(x=>x.classList.toggle('actief', x.dataset.kwast===doc.kwast));
   el('dekSchuif').value = actieveLaag().dek;
   el('dekLabel').textContent = dekPct(actieveLaag().dek);
+  kwastVoorbeeld();
 }
 
 el('kGevuld').addEventListener('click', ()=>{ doc.gevuld=!doc.gevuld; knoppenBij(); statusBij(); bewaarStraks(); });
@@ -1799,6 +1853,7 @@ function bouwStalen(){
     });
     stalenVak.appendChild(b);
   });
+  kwastVoorbeeld();   // het voorbeeld tekent in de actieve kleur
 }
 
 el('kKleurPlus').addEventListener('click', ()=>{
@@ -1896,6 +1951,7 @@ function kpToon(){
   // schuifbeweging is zonde van de DOM
   const staal = stalenVak.children[bewerkIndex];
   if(staal) staal.style.background = hex;
+  if(bewerkIndex===doc.kleur || (doc.tool==='gum' && bewerkIndex===0)) kwastVoorbeeld();
   vraagTeken();
 }
 (function bouwKpPresets(){
