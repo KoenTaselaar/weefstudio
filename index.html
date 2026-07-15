@@ -1157,13 +1157,18 @@ function verschuifVanBron(L, bron, dx, dy){
   ietsGezet = true;
 }
 
-/* Vlakvulling (emmer en glitteremmer) op de actieve laag.
-   Vult het aaneengesloten gebied met dezelfde laag-waarde (ook "leeg" telt
-   als waarde — zo vul je een leeg stuk van een laag zonder eronder te kijken). */
+/* Vlakvulling (emmer en glitteremmer): begrensd door wat je ZIET.
+   Het te vullen gebied wordt bepaald op het samengestelde beeld van alle
+   lagen (samenIdx), maar er wordt alleen op de actieve laag geschreven.
+   Zo blijft een vulling netjes binnen de vakken van je lijnwerk — óók als
+   die lijnen op een andere laag staan. (Voorheen keek de vulling alleen
+   naar de actieve laag zelf: op een verder lege vullaag was alles één
+   verbonden veld, en liep elke vulling dwars door de tekening heen.) */
 function vloedVul(x, y, maakKleur, waardenSet){
   if(x<0||y<0||x>=doc.w||y>=doc.h) return false;
-  const w=doc.w, h=doc.h, data=tekenData;
-  const start = y*w+x, oud = data[start];
+  verzekerComposiet();                    // referentie = actueel zichtbaar beeld
+  const w=doc.w, h=doc.h, data=tekenData, S=samenIdx;
+  const start = y*w+x, oud = S[start];
   // waardenSet: meerdere kleuren tellen als één vlak (voor het her-vullen van
   // een eerder ge-glitterd gebied) — maar alleen als de klik er echt in valt
   if(waardenSet && !waardenSet.has(oud)) waardenSet = null;
@@ -1175,8 +1180,8 @@ function vloedVul(x, y, maakKleur, waardenSet){
      aangrenzende baan hooguit één startpunt op de stapel zetten. De stapel
      blijft dan duizenden keren kleiner dan bij pixel-voor-pixel vullen —
      belangrijk op kleedformaat (geheugen op de iPad).
-     'bezocht' blijft nodig: de glitteremmer kan de oude kleur terugschrijven,
-     dus alleen op kleurwaarde vergelijken zou eindeloos rondlopen. */
+     Alle 'hoort dit erbij'-checks lezen S (het zichtbare beeld), dat tijdens
+     het vullen niet verandert; geschreven wordt alleen op de actieve laag. */
   const bezocht = new Uint8Array(w*h);
   const stapel = [start];
   bezocht[start] = 1;
@@ -1184,8 +1189,8 @@ function vloedVul(x, y, maakKleur, waardenSet){
     const i = stapel.pop();
     const py = (i/w)|0, rij = py*w;
     let x0 = i - rij, x1 = x0;
-    while(x0>0   && !bezocht[rij+x0-1] && past(data[rij+x0-1])){ x0--; bezocht[rij+x0]=1; }
-    while(x1<w-1 && !bezocht[rij+x1+1] && past(data[rij+x1+1])){ x1++; bezocht[rij+x1]=1; }
+    while(x0>0   && !bezocht[rij+x0-1] && past(S[rij+x0-1])){ x0--; bezocht[rij+x0]=1; }
+    while(x1<w-1 && !bezocht[rij+x1+1] && past(S[rij+x1+1])){ x1++; bezocht[rij+x1]=1; }
     const mengRij = Math.floor(py/K);   // mengraster in korrelblokken, net als de stiften
     for(let xx=x0; xx<=x1; xx++){
       if(!(meng && ((Math.floor(xx/K) + mengRij) & 1))) data[rij+xx] = kleurVoor(xx, py);
@@ -1197,11 +1202,11 @@ function vloedVul(x, y, maakKleur, waardenSet){
       const nrij = ny*w;
       for(let xx=x0; xx<=x1; xx++){
         const j = nrij+xx;
-        if(!bezocht[j] && past(data[j])){
+        if(!bezocht[j] && past(S[j])){
           bezocht[j] = 1;
           stapel.push(j);
           // de rest van deze aaneengesloten baan hoort bij hetzelfde startpunt
-          while(xx<x1 && !bezocht[nrij+xx+1] && past(data[nrij+xx+1])) xx++;
+          while(xx<x1 && !bezocht[nrij+xx+1] && past(S[nrij+xx+1])) xx++;
         }
       }
     }
@@ -1225,7 +1230,8 @@ function glitterEmmer(x, y){
      als één gebied — anders sijpelt de nieuwe vulling alleen door de blokjes
      van de aangeklikte kleur en wisselt het oude vlak vlekkerig mee. */
   let waardenSet = null;
-  const v0 = (x>=0 && y>=0 && x<doc.w && y<doc.h) ? tekenData[y*doc.w+x] : LEEG;
+  verzekerComposiet();
+  const v0 = (x>=0 && y>=0 && x<doc.w && y<doc.h) ? samenIdx[y*doc.w+x] : LEEG;
   for(let i=(doc.trios||[]).length-1; i>=0; i--){
     if(doc.trios[i].includes(v0)){ waardenSet = new Set(doc.trios[i]); break; }
   }
