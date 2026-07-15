@@ -24,7 +24,8 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 /* de actieve keuze duidelijk blauw — op een fel iPad-scherm is het ingedrukte
    randje alleen te subtiel om in één oogopslag te zien wat aanstaat */
 .werktuig.actief, .maat.actief, .kwast.actief,
-#kGevuld.actief, #kMeng.actief, #kSpiegelX.actief, #kSpiegelY.actief{ background:#9fbede; }
+#kGevuld.actief, #kMeng.actief, #kSpiegelX.actief, #kSpiegelY.actief,
+#kRaster.actief, #kWeef.actief, #kKaart.actief{ background:#9fbede; }
 
 #titelbalk{
   background:linear-gradient(90deg, var(--blauw1), var(--blauw2)); color:#fff; padding:5px 10px;
@@ -36,6 +37,8 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 
 #menubalk{ display:flex; flex-wrap:wrap; gap:4px; padding:4px 6px; border-bottom:2px solid #808080; flex:0 0 auto; align-items:center; }
 #menubalk .scheiding{ width:2px; height:32px; background:#808080; border-right:1px solid #fff; margin:0 3px; }
+#menubalk .btn{ flex-direction:column; gap:0; padding:3px 8px; }
+#menubalk .btn small{ font-size:8px; color:#333; }
 
 /* altijd-zichtbare optiebalk: dikte, kwastvorm en standen — geen scrollen meer
    om bij de dikte te komen. Loopt bij smalle iPad horizontaal door (swipe). */
@@ -193,17 +196,17 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
   <button class="btn" id="kBewaar">💾 Bewaar</button>
   <button class="btn" id="kGalerij">🗂 Galerij</button>
   <div class="scheiding"></div>
-  <button class="btn" id="kOngedaan">↩</button>
-  <button class="btn" id="kOpnieuw">↪</button>
+  <button class="btn" id="kOngedaan">↩<small>terug</small></button>
+  <button class="btn" id="kOpnieuw">↪<small>opnieuw</small></button>
   <div class="scheiding"></div>
-  <button class="btn" id="kZoomMin">−</button>
-  <button class="btn" id="kZoomPlus">+</button>
-  <button class="btn" id="kPassend">⊡</button>
-  <button class="btn" id="kRaster" title="raster + cm-lijnen">▦</button>
+  <button class="btn" id="kZoomMin">−<small>uit</small></button>
+  <button class="btn" id="kZoomPlus">+<small>in</small></button>
+  <button class="btn" id="kPassend">⊡<small>passend</small></button>
+  <button class="btn" id="kRaster" title="raster + cm-lijnen">▦<small>raster</small></button>
   <div class="scheiding"></div>
-  <button class="btn" id="kWeef" title="weefvoorbeeld">🧵 weef</button>
-  <button class="btn" id="kKaart" title="overzichtskaartje">🗺</button>
-  <button class="btn" id="kGarens" title="garentelling">🧶 garens</button>
+  <button class="btn" id="kWeef" title="weefvoorbeeld">🧵<small>weef</small></button>
+  <button class="btn" id="kKaart" title="overzichtskaartje">🗺<small>kaart</small></button>
+  <button class="btn" id="kGarens" title="garentelling">🧶<small>garens</small></button>
 </div>
 
 <div id="optiebalk">
@@ -234,15 +237,18 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <button class="btn werktuig" data-tool="gum">⬜<small>gum</small></button>
     <button class="btn werktuig" data-tool="vul">🪣<small>vullen</small></button>
     <button class="btn werktuig" data-tool="glittervul">🪣✨<small>glittervul</small></button>
+    <div class="kopje">vormen</div>
     <button class="btn werktuig" data-tool="lijn">╱<small>lijn</small></button>
     <button class="btn werktuig" data-tool="rechthoek">▭<small>rechthoek</small></button>
     <button class="btn werktuig" data-tool="cirkel">◯<small>cirkel</small></button>
+    <div class="kopje">effectstiften</div>
     <button class="btn werktuig" data-tool="spuit">🌫<small>spuitbus</small></button>
     <button class="btn werktuig" data-tool="regenboog">🌈<small>regenboog</small></button>
     <button class="btn werktuig" data-tool="glitter">✨<small>glitter</small></button>
     <button class="btn werktuig" data-tool="verloop">◐<small>verloop</small></button>
     <button class="btn werktuig" data-tool="stippel">┄<small>stippel</small></button>
     <button class="btn werktuig" data-tool="wiebel">〰<small>wiebel</small></button>
+    <div class="kopje"></div>
     <button class="btn werktuig" data-tool="pipet">💧<small>pipet</small></button>
     <button class="btn werktuig" data-tool="schuif">✥<small>schuif laag</small></button>
     <div class="kopje">bindingsstiften (kleur + volgende)</div>
@@ -554,6 +560,16 @@ let vuil = {actief:false, x0:0, y0:0, x1:0, y1:0};
 function maakVuil(x, y){ bboxVoeg(vuil, x, y); }
 function maakVuilRect(r){ maakVuil(r.x0, r.y0); maakVuil(r.x1, r.y1); }
 function maakVuilAlles(){ if(doc) maakVuilRect({x0:0,y0:0,x1:doc.w-1,y1:doc.h-1}); }
+// tijdens slepen (voorvertoning/laag schuiven) alleen het zichtbare stuk
+// hercomponeren; wie dit gebruikt moet bij het loslaten alsnog het hele
+// geraakte gebied vuil maken
+function beperkVuilTotZichtbaar(){
+  if(!vuil.actief || !doc) return;
+  const z = zichtbareRect();
+  vuil.x0 = Math.max(vuil.x0, z.x0); vuil.x1 = Math.min(vuil.x1, z.x1);
+  vuil.y0 = Math.max(vuil.y0, z.y0); vuil.y1 = Math.min(vuil.y1, z.y1);
+  if(vuil.x1 < vuil.x0 || vuil.y1 < vuil.y0) vuil.actief = false;
+}
 let paletVuil = false;    // alleen de kleuren veranderden (garenwissel)
 
 // stel het vuile stuk opnieuw samen: per pixel van boven naar beneden
@@ -930,11 +946,41 @@ function kwastOffsets(vorm, maat){
   return kwastCache[sleutel] = lijst;
 }
 
+/* Elke kwastvorm is per rij één aaneengesloten strookje — dat vullen we in
+   één keer (10-20× sneller dan pixel voor pixel bij dikke kwasten).
+   Alleen als meng of een bindingspatroon per pixel moet beslissen, valt de
+   stempel terug op het pixel-pad. */
+const kwastRijenCache = {};
+function kwastRijen(vorm, maat){
+  const sleutel = vorm+'_'+maat;
+  if(kwastRijenCache[sleutel]) return kwastRijenCache[sleutel];
+  const per = new Map();
+  for(const [dx,dy] of kwastOffsets(vorm, maat)){
+    const b = per.get(dy);
+    if(!b) per.set(dy, [dx,dx]);
+    else { if(dx<b[0]) b[0]=dx; if(dx>b[1]) b[1]=dx; }
+  }
+  const lijst = [...per.entries()].map(([dy,b])=>[dy, b[0], b[1]]);
+  return kwastRijenCache[sleutel] = lijst;
+}
+
 function stempel(x, y, maat, kleur, vorm){
-  const offs = kwastOffsets(vorm || doc.kwast || 'vierkant', maat);
-  const v = Math.floor(maat/2);
+  const vNaam = vorm || doc.kwast || 'vierkant';
+  const off = Math.floor(maat/2);
+  if(!tekenPatroon && !doc.meng){
+    const rijen = kwastRijen(vNaam, maat);
+    const zet = (cx,cy)=>{
+      for(const r of rijen) vulBaan(cx+r[1]-off, cx+r[2]-off, cy+r[0]-off, kleur);
+    };
+    zet(x,y);
+    if(doc.spiegelX) zet(doc.w-1-x, y);
+    if(doc.spiegelY) zet(x, doc.h-1-y);
+    if(doc.spiegelX && doc.spiegelY) zet(doc.w-1-x, doc.h-1-y);
+    return;
+  }
+  const offs = kwastOffsets(vNaam, maat);
   const zet = (cx,cy)=>{
-    for(const [dx,dy] of offs) zetPixel(cx+dx-v, cy+dy-v, kleur);
+    for(const [dx,dy] of offs) zetPixel(cx+dx-off, cy+dy-off, kleur);
   };
   zet(x,y);
   if(doc.spiegelX) zet(doc.w-1-x, y);
@@ -946,13 +992,24 @@ function stempel1(x, y, kleur){ stempel(x, y, 1, kleur, 'vierkant'); }
 function lijn(x0,y0,x1,y1,maat,kleur,vorm){
   const dx = Math.abs(x1-x0), dy = Math.abs(y1-y0);
   const sx = x0<x1?1:-1, sy = y0<y1?1:-1;
-  let err = dx-dy;
+  /* Dikke blok- en ronde kwasten hoeven niet op élk rasterpunt te stempelen:
+     om de halve kwastbreedte blijft de band gesloten, en het scheelt op
+     kleedformaat een veelvoud aan werk (een lijn van dikte 20 stempelde
+     anders 400 pixels per stapje van 1). De schuine kalligrafie-kwasten
+     zijn dun en stempelen wel elk punt. */
+  const v = vorm || doc.kwast || 'vierkant';
+  const stap = (v==='vierkant' || v==='rond') ? Math.max(1, maat>>1) : 1;
+  let err = dx-dy, i = 0;
   while(true){
-    stempel(x0,y0,maat,kleur,vorm);
-    if(x0===x1 && y0===y1) break;
+    if(i % stap === 0) stempel(x0,y0,maat,kleur,vorm);
+    if(x0===x1 && y0===y1){
+      if(i % stap !== 0) stempel(x0,y0,maat,kleur,vorm);   // eindpunt altijd
+      break;
+    }
     const e2 = 2*err;
     if(e2 > -dy){ err-=dy; x0+=sx; }
     if(e2 <  dx){ err+=dx; y0+=sy; }
+    i++;
   }
 }
 
@@ -962,14 +1019,69 @@ function rechthoek(x0,y0,x1,y1,maat,kleur,vorm){
   lijn(x1,y1,x0,y1,maat,kleur,vorm);
   lijn(x0,y1,x0,y0,maat,kleur,vorm);
 }
+
+/* Eén horizontale baan pixels in één keer vullen (typed-array fill is
+   tientallen keren sneller dan pixel voor pixel) — met dezelfde boekhouding
+   als zetPixel. Het mengraster wordt als blok-fills verwerkt, dus ook mét
+   meng blijft dit snel. Alleen een eigen tekenPatroon kan hier niet in. */
+function vulBaan(xa, xb, y, kleur){
+  if(y<0 || y>=doc.h) return;
+  xa = Math.max(0, xa); xb = Math.min(doc.w-1, xb);
+  if(xb < xa) return;
+  if(kleur!==LEEG && kleur>=doc.palet.length) return;
+  const rij = y*doc.w;
+  if(!doc.meng){
+    tekenData.fill(kleur, rij+xa, rij+xb+1);
+  }else{
+    // om-en-om in korrelblokken: alleen de 'aan'-blokken van deze rij vullen
+    const K = korrel();
+    const mengRij = Math.floor(y/K);
+    let bx = Math.floor(xa/K);
+    if((bx + mengRij) & 1) bx++;
+    for(; bx*K <= xb; bx += 2){
+      const a = Math.max(xa, bx*K), b = Math.min(xb, bx*K + K - 1);
+      if(b >= a) tekenData.fill(kleur, rij+a, rij+b+1);
+    }
+  }
+  maakVuil(xa, y); maakVuil(xb, y);
+  bboxVoeg(strokeBbox, xa, y); bboxVoeg(strokeBbox, xb, y);
+  if(moveBbox){ bboxVoeg(moveBbox, xa, y); bboxVoeg(moveBbox, xb, y); }
+  ietsGezet = true;
+}
+// de baan plus zijn spiegelbeelden (dezelfde vier varianten als stempel)
+function vulBaanSpiegel(xa, xb, y, kleur){
+  vulBaan(xa, xb, y, kleur);
+  if(doc.spiegelX) vulBaan(doc.w-1-xb, doc.w-1-xa, y, kleur);
+  if(doc.spiegelY) vulBaan(xa, xb, doc.h-1-y, kleur);
+  if(doc.spiegelX && doc.spiegelY) vulBaan(doc.w-1-xb, doc.w-1-xa, doc.h-1-y, kleur);
+}
+
 function rechthoekGevuld(x0,y0,x1,y1,kleur){
   const ax=Math.min(x0,x1), bx=Math.max(x0,x1), ay=Math.min(y0,y1), by=Math.max(y0,y1);
+  if(!tekenPatroon){
+    for(let y=ay;y<=by;y++) vulBaanSpiegel(ax, bx, y, kleur);
+    return;
+  }
   for(let y=ay;y<=by;y++) for(let x=ax;x<=bx;x++) stempel1(x,y,kleur);
 }
 
 function cirkel(x0,y0,x1,y1,maat,kleur,vorm){
   const cx=(x0+x1)/2, cy=(y0+y1)/2, rx=Math.abs(x1-x0)/2, ry=Math.abs(y1-y0)/2;
-  const n = Math.max(24, Math.round((rx+ry)*4));
+  const v = vorm || doc.kwast || 'vierkant';
+  const omtrek = Math.max(8, Math.PI*(rx+ry));
+  if(maat>=4 && (v==='vierkant' || v==='rond')){
+    /* Dikke kwast: losse stempels om de halve kwastbreedte langs de rand —
+       de overlap houdt de band gesloten. Lijn-segmenten stempelden hier
+       hun eindpunten om de ±2 px, honderden keren te veel werk. */
+    const n = Math.ceil(omtrek / Math.max(1, maat/2));
+    for(let i=0;i<n;i++){
+      const t = i/n*Math.PI*2;
+      stempel(Math.round(cx+Math.cos(t)*rx), Math.round(cy+Math.sin(t)*ry), maat, kleur, vorm);
+    }
+    return;
+  }
+  // dunne kwast: korte lijnstukjes zodat er geen gaatjes vallen
+  const n = Math.max(24, Math.round(omtrek*0.8));
   let vx=null, vy=null;
   for(let i=0;i<=n;i++){
     const t = i/n*Math.PI*2;
@@ -981,11 +1093,14 @@ function cirkel(x0,y0,x1,y1,maat,kleur,vorm){
 function ellipsGevuld(x0,y0,x1,y1,kleur){
   const cx=(x0+x1)/2, cy=(y0+y1)/2, rx=Math.abs(x1-x0)/2, ry=Math.abs(y1-y0)/2;
   if(rx<0.5 || ry<0.5){ lijn(x0,y0,x1,y1,1,kleur,'vierkant'); return; }
+  const snel = !tekenPatroon;
   for(let y=Math.round(cy-ry); y<=Math.round(cy+ry); y++){
     const t=(y-cy)/ry, b=1-t*t;
     if(b<0) continue;
     const dx=rx*Math.sqrt(b);
-    for(let x=Math.round(cx-dx); x<=Math.round(cx+dx); x++) stempel1(x,y,kleur);
+    const xa = Math.round(cx-dx), xb = Math.round(cx+dx);
+    if(snel) vulBaanSpiegel(xa, xb, y, kleur);
+    else for(let x=xa; x<=xb; x++) stempel1(x,y,kleur);
   }
 }
 
@@ -1417,12 +1532,15 @@ weergave.addEventListener('pointermove', e=>{
   if(drukTimer && Math.hypot(e.clientX-haal.startSX, e.clientY-haal.startSY) > 9){
     clearTimeout(drukTimer); drukTimer = null;
   }
-  const stappen = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
-  for(const ev of stappen){
-    const [x,y] = schermNaarRaster(ev);
-    const s = haal.soort;
-    if(PREVIEW_TOOLS.includes(s)){
-      // voorvertoning: oude versie terugzetten, vorm opnieuw tekenen
+  /* Voorvertoning (lijn/rechthoek/cirkel): de vorm hangt alleen af van begin-
+     en eindpunt, dus alléén de laatste vingerpositie telt — niet elk
+     tussenliggend bewegings-event opnieuw de hele vorm hertekenen (dat was
+     de bevriezer op kleedformaat). En alleen het zichtbare stuk live
+     hercomponeren; de rest volgt in één keer bij het loslaten. */
+  if(PREVIEW_TOOLS.includes(haal.soort)){
+    const [x,y] = schermNaarRaster(e);
+    if(x!==haal.vx || y!==haal.vy){
+      const s = haal.soort;
       herstelRect(haal.laag, haal.voor, haal.prevBbox);
       moveBbox = bboxUit();
       if(s==='lijn') lijn(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
@@ -1434,7 +1552,17 @@ weergave.addEventListener('pointermove', e=>{
         else cirkel(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
       }
       haal.prevBbox = moveBbox; moveBbox = null;
-    }else if(s==='schuif'){
+      haal.vx = x; haal.vy = y;
+      beperkVuilTotZichtbaar();
+    }
+    vraagTeken();
+    return;
+  }
+  const stappen = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+  for(const ev of stappen){
+    const [x,y] = schermNaarRaster(ev);
+    const s = haal.soort;
+    if(s==='schuif'){
       haal.dx = x-haal.sx; haal.dy = y-haal.sy;
       verschuifVanBron(haal.laag, haal.voor, haal.dx, haal.dy);
       maakVuilRect(zichtbareRect());   // alleen het zichtbare stuk live bijwerken
@@ -1521,6 +1649,9 @@ function haalCommit(){
     }
   }else if(haal.soort!=='pan' && ietsGezet){
     undoPush(diffUitBbox(haal.laag, haal.voor, strokeBbox));
+    // tijdens het slepen van een vorm werd alleen het zichtbare stuk
+    // hercomponeerd — nu het hele geraakte gebied alsnog bijwerken
+    if(PREVIEW_TOOLS.includes(haal.soort)) maakVuilRect(strokeBbox);
   }
   haal = null;
 }
