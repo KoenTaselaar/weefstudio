@@ -248,6 +248,7 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <button class="btn werktuig" data-tool="verloop">◐<small>verloop</small></button>
     <button class="btn werktuig" data-tool="stippel">┄<small>stippel</small></button>
     <button class="btn werktuig" data-tool="wiebel">〰<small>wiebel</small></button>
+    <button class="btn werktuig" data-tool="koord">🪢<small>koord</small></button>
     <div class="kopje"></div>
     <button class="btn werktuig" data-tool="pipet">💧<small>pipet</small></button>
     <button class="btn werktuig" data-tool="schuif">✥<small>schuif laag</small></button>
@@ -288,7 +289,7 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
   <button class="btn" id="kKleurPlus">＋</button>
   <button class="btn" id="kKleurMin">－</button>
   <button class="btn" id="kKleurBewerk">🎨</button>
-  <span class="uitleg">tik = kiezen · nogmaals = kleur aanpassen (garenwissel) · ✌️ 2-vingertik = ongedaan, 3 vingers = opnieuw · stift stilhouden = kleur oppikken</span>
+  <span class="uitleg">tik = kiezen · nogmaals = kleur aanpassen · ✌️ 2-vingertik = ongedaan, 3 = opnieuw · stil vasthouden: meteen = kleur pakken, ná een haal = rechte lijn</span>
 </div>
 
 <div id="statusbalk">
@@ -367,6 +368,10 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
       <div class="kpRegel"><label>tint</label><div class="kpTrack" id="kpH"><div class="kpDuim"></div></div></div>
       <div class="kpRegel"><label>verzadiging</label><div class="kpTrack" id="kpS"><div class="kpDuim"></div></div></div>
       <div class="kpRegel"><label>helderheid</label><div class="kpTrack" id="kpL"><div class="kpDuim"></div></div></div>
+      <label class="regel" id="kpBehoudRegel" style="font-size:12px;">
+        <input type="checkbox" id="kpBehoud" style="width:24px;height:24px;">
+        laat wat al getekend is in de oude kleur (nieuwe kleur komt er als staal bij)
+      </label>
       <div class="regel">
         <button class="btn" id="kpOk" style="font-weight:bold;">OK</button>
         <button class="btn" id="kpAnnuleer">Annuleer</button>
@@ -1362,6 +1367,11 @@ let knijp = null;
 let spuitTimer = null;
 let multiTik = null;    // kandidaat voor twee-/drievinger-tik (undo/redo)
 let drukTimer = null;   // vasthoud-pipet: stift stilhouden = kleur oppikken
+let snapTimer = null;   // kijkt of de pen na een haal stilgehouden wordt (haal → rechte lijn)
+// welke halen mogen bij stil vasthouden een rechte lijn worden: alles wat
+// rastervast of effen tekent (Procreate-truc uit PixelPaint); de
+// bindingsstiften doen mee omdat hun patroon vastligt op het doekraster
+const SNAP_TOOLS = ['pen','gum','eigenpat', ...Object.keys(BINDINGEN)];
 
 function schermNaarRaster(e){
   const r = weergave.getBoundingClientRect();
@@ -1450,7 +1460,31 @@ weergave.addEventListener('pointerdown', e=>{
   const maat  = (t==='gum') ? Math.max(doc.maat,2) : doc.maat;
   const kwast = (t==='gum') ? 'vierkant' : (doc.kwast||'vierkant');
   haal = {soort:t, type:e.pointerType, id:e.pointerId, vx:x, vy:y, sx:x, sy:y, kleur, maat, kwast,
-          laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0};
+          laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0, stil:Date.now()};
+  if(t==='koord'){
+    // twee garens die om je lijn heen draaien — als een getwijnd koord
+    haal.hoek = 0;
+    haal.kleurA = doc.kleur;
+    haal.kleurB = volgendePaletKleur();
+  }
+  if(SNAP_TOOLS.includes(t)){
+    /* Stil vasthouden (0,6 s) na een haal: de kromme haal wordt een strakke
+       lijn, en zolang je vasthoudt blijft het eindpunt sleepbaar (Procreate).
+       De haal verandert daarvoor gewoon in een lopende lijn-voorvertoning. */
+    clearInterval(snapTimer);
+    snapTimer = setInterval(()=>{
+      if(!haal || !SNAP_TOOLS.includes(haal.soort)) return;
+      if(Date.now() - haal.stil < 600) return;                                // nog niet lang genoeg stil
+      if(Math.abs(haal.vx-haal.sx) + Math.abs(haal.vy-haal.sy) < 3) return;   // een stipje is geen lijn
+      herstelRect(haal.laag, haal.voor, strokeBbox);
+      moveBbox = bboxUit();
+      lijn(haal.sx, haal.sy, haal.vx, haal.vy, haal.maat, haal.kleur, haal.kwast);
+      haal.prevBbox = moveBbox; moveBbox = null;
+      haal.soort = 'lijn';
+      clearInterval(snapTimer);
+      vraagTeken();
+    }, 120);
+  }
   if(t==='verloop'){
     // reist eindeloos door het hele palet, beginnend bij de gekozen kleur
     haal.kleuren = regenboogKleuren();
@@ -1477,7 +1511,7 @@ weergave.addEventListener('pointerdown', e=>{
     moveBbox = bboxUit();
     stempel(x,y,maat,kleur,kwast);
     haal.prevBbox = moveBbox; moveBbox = null;
-  }else if(t!=='schuif'){
+  }else if(t!=='schuif' && t!=='koord'){
     stempel(x,y,maat,kleur,kwast);
   }
   /* Vasthoud-pipet: de stift even stilhouden pikt de kleur onder je punt op
@@ -1489,6 +1523,9 @@ weergave.addEventListener('pointerdown', e=>{
     drukTimer = setTimeout(()=>{
       drukTimer = null;
       if(!haal || haal.id !== e.pointerId) return;
+      // is er op rasterniveau al echt een haal gezet? dan is stilhouden
+      // voor de rechte-lijn-truc, niet voor de pipet
+      if(Math.abs(haal.vx-haal.sx) + Math.abs(haal.vy-haal.sy) >= 3) return;
       const px = haal.vx, py = haal.vy;
       haalAfbreken();
       verzekerComposiet();
@@ -1601,10 +1638,24 @@ weergave.addEventListener('pointermove', e=>{
       lijn(haal.vx, haal.vy, wx, wy, haal.maat, haal.kleur, haal.kwast);
       haal.vx = wx; haal.vy = wy;
       continue;
+    }else if(s==='koord'){
+      // twee garens draaien om je lijn heen — als een getwijnd koord
+      if(x===haal.vx && y===haal.vy) continue;
+      const n = Math.max(1, Math.ceil(Math.hypot(x-haal.vx, y-haal.vy)));
+      const dot = Math.max(1, Math.round(haal.maat/3));
+      for(let k=1;k<=n;k++){
+        const px = haal.vx + (x-haal.vx)*k/n;
+        const py = haal.vy + (y-haal.vy)*k/n;
+        haal.hoek += 0.5;
+        const rx = Math.cos(haal.hoek)*haal.maat, ry = Math.sin(haal.hoek)*haal.maat;
+        stempel(Math.round(px+rx), Math.round(py+ry), dot, haal.kleurA, 'rond');
+        stempel(Math.round(px-rx), Math.round(py-ry), dot, haal.kleurB, 'rond');
+      }
     }else{ // pen, gum, regenboog, bindingsstiften, eigen patroon
       if(x===haal.vx && y===haal.vy) continue;
       if(s==='regenboog') haal.kleur = volgendeRegenboog();
       lijn(haal.vx, haal.vy, x, y, haal.maat, haal.kleur, haal.kwast);
+      haal.stil = Date.now();   // er is bewogen: de vasthoud-klok begint opnieuw
     }
     haal.vx = x; haal.vy = y;
   }
@@ -1624,6 +1675,7 @@ function pipetFlits(hex){
 function haalAfbreken(){
   clearTimeout(drukTimer); drukTimer = null;
   clearInterval(spuitTimer);
+  clearInterval(snapTimer);
   tekenPatroon = null;
   if(haal && haal.soort!=='pan' && haal.voor){
     haal.laag.data.set(haal.voor);
@@ -1637,6 +1689,7 @@ function haalAfbreken(){
 function haalStop(){
   clearTimeout(drukTimer); drukTimer = null;
   clearInterval(spuitTimer);
+  clearInterval(snapTimer);
   tekenPatroon = null;
   haal = null;
   knijp = null;
@@ -1646,6 +1699,7 @@ function haalStop(){
 // de lopende haal afronden: ongedaan-stap vastleggen en opruimen
 function haalCommit(){
   clearInterval(spuitTimer);
+  clearInterval(snapTimer);
   tekenPatroon = null;
   if(!haal) return;
   if(haal.soort==='schuif'){
@@ -2022,6 +2076,19 @@ el('kKleurMin').addEventListener('click', ()=>{
   if(doc.kleur >= doc.palet.length) doc.kleur = doc.palet.length-1;
   paletPlatCache = null;
   undoPush({type:'palet', voor, na:doc.palet.slice(), bytes:256});
+  /* Ook de ongedaan-geschiedenis opruimen: een oude stap kan de verwijderde
+     index nog terugschrijven, en dat werk kleurt dan stiekem om zodra er
+     later met ＋ een nieuwe kleur bijkomt (kleurintegriteit, uit PixelPaint). */
+  const live = new Set(doc.lagen.map(l=>l.data));
+  const schoon = a=>{ for(let i=0;i<a.length;i++) if(a[i]===idx) a[i]=0; };
+  for(const e of undoLijst){
+    if(e.type==='pixels'){ schoon(e.oud); schoon(e.nieuw); }
+    else if(e.type==='lagen'){
+      for(const kant of [e.voor, e.na]) for(const l of kant.lijst){
+        if(!live.has(l.data)){ schoon(l.data); live.add(l.data); }
+      }
+    }
+  }
   bouwStalen(); bewaarStraks();
 });
 el('kKleurBewerk').addEventListener('click', ()=>kleurKiezerOpen(doc.kleur));
@@ -2068,8 +2135,20 @@ function kleurKiezerOpen(index, nieuw){
   bewerkIndex = index;
   kpPaletVoor = (nieuw ? paletVoorNieuw : doc.palet).slice();
   kp = hexNaarHsl(doc.palet[index]);
+  // de behoud-optie is zinloos bij een gloednieuwe (nog ongebruikte) kleur
+  el('kpBehoudRegel').style.display = nieuw ? 'none' : '';
+  el('kpBehoud').checked = false;
   kpToon();
   kleurSluier.classList.add('zichtbaar');
+}
+
+// wordt deze paletkleur ergens op een laag gebruikt?
+function kleurInGebruik(idx){
+  for(const L of doc.lagen){
+    const d = L.data;
+    for(let i=0;i<d.length;i++) if(d[i]===idx) return true;
+  }
+  return false;
 }
 function kpToon(){
   const hex = hslNaarHex(kp.h, kp.s, kp.l);
@@ -2113,6 +2192,22 @@ trackKoppel(el('kpH'), t=>kp.h = t*360);
 trackKoppel(el('kpS'), t=>kp.s = t*100);
 trackKoppel(el('kpL'), t=>kp.l = t*100);
 el('kpOk').addEventListener('click', ()=>{
+  /* Behoud-optie: wat al getekend is houdt de oude kleur — de nieuwe kleur
+     komt er als extra staal bij en wordt meteen de tekenkleur. Zo wissel je
+     van kleur zonder dat eerder werk omkleurt (de garenwissel blijft
+     beschikbaar door het vinkje gewoon uit te laten). */
+  const origineel = kpPaletVoor[bewerkIndex];
+  if(el('kpBehoud').checked && el('kpBehoudRegel').style.display !== 'none'
+     && doc.palet[bewerkIndex] !== origineel && kleurInGebruik(bewerkIndex)){
+    if(doc.palet.length < MAX_KLEUREN){
+      const nieuweKleur = doc.palet[bewerkIndex];
+      doc.palet[bewerkIndex] = origineel;
+      doc.palet.push(nieuweKleur);
+      doc.kleur = doc.palet.length-1;
+    }else{
+      melding('Het palet is vol ('+MAX_KLEUREN+' kleuren) — de bestaande kleur verandert nu toch mee.');
+    }
+  }
   undoPush({type:'palet', voor:kpPaletVoor, na:doc.palet.slice(), bytes:256});
   herkleurAlles();              // de volledige kleurpas (tijdens het schuiven deden we alleen het zichtbare stuk)
   bouwStalen();
