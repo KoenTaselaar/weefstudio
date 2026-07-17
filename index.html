@@ -1460,7 +1460,8 @@ weergave.addEventListener('pointerdown', e=>{
   const maat  = (t==='gum') ? Math.max(doc.maat,2) : doc.maat;
   const kwast = (t==='gum') ? 'vierkant' : (doc.kwast||'vierkant');
   haal = {soort:t, type:e.pointerType, id:e.pointerId, vx:x, vy:y, sx:x, sy:y, kleur, maat, kwast,
-          laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0, stil:Date.now()};
+          laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0,
+          stil:Date.now(), stilX:e.clientX, stilY:e.clientY};
   if(t==='koord'){
     // twee garens die om je lijn heen draaien — als een getwijnd koord
     haal.hoek = 0;
@@ -1575,6 +1576,14 @@ weergave.addEventListener('pointermove', e=>{
   if(drukTimer && Math.hypot(e.clientX-haal.startSX, e.clientY-haal.startSY) > 9){
     clearTimeout(drukTimer); drukTimer = null;
   }
+  /* De stil-klok (vasthouden = rechte lijn) kijkt in SCHERM-pixels, met een
+     dode zone: een Apple Pencil trilt altijd een beetje door, en uitgezoomd
+     zijn dat al gauw meerdere rasterpunten — op rasterbeweging letten zou de
+     klok dan eindeloos herstarten en de lijn nooit recht laten springen. */
+  if(haal.stilX !== undefined && Math.hypot(e.clientX-haal.stilX, e.clientY-haal.stilY) > 5){
+    haal.stil = Date.now();
+    haal.stilX = e.clientX; haal.stilY = e.clientY;
+  }
   /* Voorvertoning (lijn/rechthoek/cirkel): de vorm hangt alleen af van begin-
      en eindpunt, dus alléén de laatste vingerpositie telt — niet elk
      tussenliggend bewegings-event opnieuw de hele vorm hertekenen (dat was
@@ -1655,7 +1664,7 @@ weergave.addEventListener('pointermove', e=>{
       if(x===haal.vx && y===haal.vy) continue;
       if(s==='regenboog') haal.kleur = volgendeRegenboog();
       lijn(haal.vx, haal.vy, x, y, haal.maat, haal.kleur, haal.kwast);
-      haal.stil = Date.now();   // er is bewogen: de vasthoud-klok begint opnieuw
+      // de vasthoud-klok wordt in schermpixels bijgehouden, bovenin de handler
     }
     haal.vx = x; haal.vy = y;
   }
