@@ -212,12 +212,14 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 <div id="optiebalk">
   <canvas id="kwastVoorbeeld" width="44" height="42" title="zo groot tekent je stift nu"></canvas>
   <span class="kop">dikte</span>
-  <button class="btn maat" data-maat="1">·</button>
-  <button class="btn maat actief" data-maat="2">•</button>
-  <button class="btn maat" data-maat="4">●</button>
-  <button class="btn maat" data-maat="8">⬤</button>
-  <button class="btn maat" data-maat="12">⬤+</button>
-  <button class="btn maat" data-maat="20">⬤++</button>
+  <button class="btn maat" data-maat="1">·<small>1</small></button>
+  <button class="btn maat actief" data-maat="2">•<small>2</small></button>
+  <button class="btn maat" data-maat="4">●<small>4</small></button>
+  <button class="btn maat" data-maat="8">⬤<small>8</small></button>
+  <button class="btn maat" data-maat="12">⬤<small>12</small></button>
+  <button class="btn maat" data-maat="20">⬤<small>20</small></button>
+  <button class="btn maat" data-maat="32">⬛<small>32</small></button>
+  <button class="btn maat" data-maat="48">⬛<small>48</small></button>
   <div class="scheiding"></div>
   <span class="kop">kwast</span>
   <button class="btn kwast actief" data-kwast="vierkant">■<small>blok</small></button>
@@ -369,9 +371,9 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
       <div class="kpRegel"><label>tint</label><div class="kpTrack" id="kpH"><div class="kpDuim"></div></div></div>
       <div class="kpRegel"><label>verzadiging</label><div class="kpTrack" id="kpS"><div class="kpDuim"></div></div></div>
       <div class="kpRegel"><label>helderheid</label><div class="kpTrack" id="kpL"><div class="kpDuim"></div></div></div>
-      <label class="regel" id="kpBehoudRegel" style="font-size:12px;">
-        <input type="checkbox" id="kpBehoud" style="width:24px;height:24px;">
-        laat wat al getekend is in de oude kleur (nieuwe kleur komt er als staal bij)
+      <label class="regel" id="kpWisselRegel" style="font-size:12px;">
+        <input type="checkbox" id="kpWissel" style="width:24px;height:24px;">
+        verander óók wat al getekend is (garenwissel) — anders komt de nieuwe kleur er als staal bij
       </label>
       <div class="regel">
         <button class="btn" id="kpOk" style="font-weight:bold;">OK</button>
@@ -1923,13 +1925,14 @@ function kwastVoorbeeld(){
   const offs = isKorrel
     ? (()=>{ const l=[]; for(let y=0;y<maat;y++)for(let x=0;x<maat;x++)l.push([x,y]); return l; })()
     : kwastOffsets(doc.kwast||'vierkant', maat);
-  // schaal zodat de grootste dikte (20) net in het vakje past
-  const p = Math.max(1, Math.floor(Math.min(W,H)/22));
+  // schaal zodat ook de grootste dikte (48) in het vakje past; bij grote
+  // maten worden de blokjes fractioneel — met een snufje overlap blijft
+  // het voorbeeld dan toch gesloten
+  const p = Math.min(2, (Math.min(W,H)-2) / Math.max(22, maat+2));
   const cx = W/2, cy = H/2, half = (maat-1)/2;
   for(const [dx,dy] of offs){
-    const bx = Math.round(cx+(dx-half)*p), by = Math.round(cy+(dy-half)*p);
     if(doc.meng && ((dx+dy)&1)) continue;   // mengstand: om-en-om weglaten
-    kwastVbCtx.fillRect(bx, by, p, p);
+    kwastVbCtx.fillRect(cx+(dx-half)*p, cy+(dy-half)*p, p+0.4, p+0.4);
   }
 }
 
@@ -2248,13 +2251,16 @@ function hexNaarHsl(hex){
   return {h, s:Math.min(100, s*100), l:l*100};
 }
 
+let kpInGebruik = false;   // is er al mee getekend? dan is behouden de standaard
 function kleurKiezerOpen(index, nieuw){
   bewerkIndex = index;
   kpPaletVoor = (nieuw ? paletVoorNieuw : doc.palet).slice();
   kp = hexNaarHsl(doc.palet[index]);
-  // de behoud-optie is zinloos bij een gloednieuwe (nog ongebruikte) kleur
-  el('kpBehoudRegel').style.display = nieuw ? 'none' : '';
-  el('kpBehoud').checked = false;
+  // is er al met deze kleur getekend? dan blijft bestaand werk STANDAARD
+  // in de oude kleur; de garenwissel is de uitzondering (vinkje aan)
+  kpInGebruik = !nieuw && kleurInGebruik(index);
+  el('kpWisselRegel').style.display = kpInGebruik ? '' : 'none';
+  el('kpWissel').checked = false;
   kpToon();
   kleurSluier.classList.add('zichtbaar');
 }
@@ -2269,8 +2275,6 @@ function kleurInGebruik(idx){
 }
 function kpToon(){
   const hex = hslNaarHex(kp.h, kp.s, kp.l);
-  doc.palet[bewerkIndex] = hex;
-  paletPlatCache = null;
   el('kpPreview').style.background = hex;
   el('kpHex').textContent = hex;
   el('kpH').style.background = 'linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)';
@@ -2279,14 +2283,32 @@ function kpToon(){
   el('kpH').querySelector('.kpDuim').style.left = (kp.h/360*100)+'%';
   el('kpS').querySelector('.kpDuim').style.left = kp.s+'%';
   el('kpL').querySelector('.kpDuim').style.left = kp.l+'%';
-  paletVuil = true;           // garenwissel: het doek kleurt live mee
-  // alleen het bewerkte staal bijwerken — de hele paletbalk herbouwen bij elke
-  // schuifbeweging is zonde van de DOM
-  const staal = stalenVak.children[bewerkIndex];
-  if(staal) staal.style.background = hex;
-  if(bewerkIndex===doc.kleur || (doc.tool==='gum' && bewerkIndex===0)) kwastVoorbeeld();
-  vraagTeken();
+  /* Het doek en het staal kleuren alleen live mee als het een garenwissel
+     is: bij een ongebruikte kleur altijd, bij een gebruikte kleur alleen
+     met het vinkje aan. Anders blijft alles staan en zie je de nieuwe
+     kleur alleen in het voorbeeldblokje — die komt er straks als staal bij. */
+  if(!kpInGebruik || el('kpWissel').checked){
+    doc.palet[bewerkIndex] = hex;
+    paletPlatCache = null;
+    paletVuil = true;
+    const staal = stalenVak.children[bewerkIndex];
+    if(staal) staal.style.background = hex;
+    if(bewerkIndex===doc.kleur || (doc.tool==='gum' && bewerkIndex===0)) kwastVoorbeeld();
+    vraagTeken();
+  }
 }
+// vinkje omzetten: garenwissel-voorproef direct aan of uit
+el('kpWissel').addEventListener('change', ()=>{
+  if(!el('kpWissel').checked && kpInGebruik){
+    doc.palet[bewerkIndex] = kpPaletVoor[bewerkIndex];   // voorproef terugdraaien
+    paletPlatCache = null;
+    paletVuil = true;
+    const staal = stalenVak.children[bewerkIndex];
+    if(staal) staal.style.background = kpPaletVoor[bewerkIndex];
+    vraagTeken();
+  }
+  kpToon();
+});
 (function bouwKpPresets(){
   const vak = el('kpPresets');
   MSPAINT_KLEUREN.forEach(hex=>{
@@ -2309,22 +2331,24 @@ trackKoppel(el('kpH'), t=>kp.h = t*360);
 trackKoppel(el('kpS'), t=>kp.s = t*100);
 trackKoppel(el('kpL'), t=>kp.l = t*100);
 el('kpOk').addEventListener('click', ()=>{
-  /* Behoud-optie: wat al getekend is houdt de oude kleur — de nieuwe kleur
-     komt er als extra staal bij en wordt meteen de tekenkleur. Zo wissel je
-     van kleur zonder dat eerder werk omkleurt (de garenwissel blijft
-     beschikbaar door het vinkje gewoon uit te laten). */
+  /* Standaard blijft wat al getekend is in zijn kleur: bij een gebruikte
+     kleur komt de nieuwe kleur er als extra staal bij (meteen actief als
+     tekenkleur). Alleen mét het garenwissel-vinkje verandert het bestaande
+     werk mee. Bij een nog ongebruikte kleur wordt de plek gewoon aangepast. */
+  const gekozen = hslNaarHex(kp.h, kp.s, kp.l);
   const origineel = kpPaletVoor[bewerkIndex];
-  if(el('kpBehoud').checked && el('kpBehoudRegel').style.display !== 'none'
-     && doc.palet[bewerkIndex] !== origineel && kleurInGebruik(bewerkIndex)){
+  if(kpInGebruik && !el('kpWissel').checked && gekozen !== origineel){
+    doc.palet[bewerkIndex] = origineel;   // bestaand werk houdt zijn garen
     if(doc.palet.length < MAX_KLEUREN){
-      const nieuweKleur = doc.palet[bewerkIndex];
-      doc.palet[bewerkIndex] = origineel;
-      doc.palet.push(nieuweKleur);
+      doc.palet.push(gekozen);
       doc.kleur = doc.palet.length-1;
     }else{
-      melding('Het palet is vol ('+MAX_KLEUREN+' kleuren) — de bestaande kleur verandert nu toch mee.');
+      melding('Het palet is vol ('+MAX_KLEUREN+' kleuren) — de nieuwe kleur kan er niet bij. Vink garenwissel aan, of verwijder eerst een ongebruikte kleur.');
     }
+  }else{
+    doc.palet[bewerkIndex] = gekozen;
   }
+  paletPlatCache = null;
   undoPush({type:'palet', voor:kpPaletVoor, na:doc.palet.slice(), bytes:256});
   herkleurAlles();              // de volledige kleurpas (tijdens het schuiven deden we alleen het zichtbare stuk)
   bouwStalen();
