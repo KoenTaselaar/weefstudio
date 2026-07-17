@@ -237,6 +237,7 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <button class="btn werktuig" data-tool="gum">⬜<small>gum</small></button>
     <button class="btn werktuig" data-tool="vul">🪣<small>vullen</small></button>
     <button class="btn werktuig" data-tool="glittervul">🪣✨<small>glittervul</small></button>
+    <button class="btn werktuig" data-tool="verloopvul" title="tik in een vlak en sleep: verloop door de paletkleuren">🪣◐<small>verloopvul</small></button>
     <div class="kopje">vormen</div>
     <button class="btn werktuig" data-tool="lijn">╱<small>lijn</small></button>
     <button class="btn werktuig" data-tool="rechthoek">▭<small>rechthoek</small></button>
@@ -1262,6 +1263,86 @@ function glitterEmmer(x, y){
   return gelukt;
 }
 
+/* ---------- verloopvul: tik in een vlak, sleep de richting ----------
+   Bepaalt eerst (net als de emmer) het zichtbaar begrensde vlak, en vult
+   dat met een gestrooid verloop door de paletkleuren: je sleep bepaalt
+   richting en lengte van de overgang. Rastervast per korrelblok. */
+// het aaneengesloten vlak rond (x,y) op het zichtbare beeld, als masker
+function vulMasker(x, y){
+  if(x<0||y<0||x>=doc.w||y>=doc.h) return null;
+  verzekerComposiet();
+  const w=doc.w, h=doc.h, S=samenIdx;
+  const oud = S[y*w+x];
+  const m = new Uint8Array(w*h);
+  const bb = bboxUit();
+  const stapel = [y*w+x];
+  m[y*w+x] = 1;
+  while(stapel.length){
+    const i = stapel.pop();
+    const py=(i/w)|0, rij=py*w;
+    let x0=i-rij, x1=x0;
+    while(x0>0   && !m[rij+x0-1] && S[rij+x0-1]===oud){ x0--; m[rij+x0]=1; }
+    while(x1<w-1 && !m[rij+x1+1] && S[rij+x1+1]===oud){ x1++; m[rij+x1]=1; }
+    bboxVoeg(bb, x0, py); bboxVoeg(bb, x1, py);
+    for(let ny=py-1; ny<=py+1; ny+=2){
+      if(ny<0||ny>=h) continue;
+      const nrij=ny*w;
+      for(let xx=x0;xx<=x1;xx++){
+        const j=nrij+xx;
+        if(!m[j] && S[j]===oud){
+          m[j]=1; stapel.push(j);
+          while(xx<x1 && !m[nrij+xx+1] && S[nrij+xx+1]===oud) xx++;
+        }
+      }
+    }
+  }
+  return {m, bb};
+}
+
+/* het verloop in het masker tekenen, met (x,y) als sleep-eindpunt.
+   Tijdens het slepen alleen het zichtbare stuk (snel); bij het loslaten
+   nog één keer volledig. De strooi-loting per korrelblok komt uit een
+   vaste hash van de blokcoördinaten: slepen verschuift alleen de overgang,
+   het spikkelpatroon zelf flikkert niet. */
+function verloopVulTeken(h, x, y, volledig){
+  const bb = h.mbbox;
+  let rb = bb;
+  if(!volledig){
+    const z = zichtbareRect();
+    rb = {actief:true, x0:Math.max(bb.x0,z.x0), y0:Math.max(bb.y0,z.y0),
+          x1:Math.min(bb.x1,z.x1), y1:Math.min(bb.y1,z.y1)};
+    if(rb.x1<rb.x0 || rb.y1<rb.y0) return;
+  }
+  herstelRect(h.laag, h.voor, rb);
+  const dx = x - h.sx, dy = y - h.sy;
+  const len2 = dx*dx + dy*dy;
+  const K = korrel(), kl = h.kleuren, n = kl.length;
+  const data = h.laag.data, w = doc.w, m = h.masker, meng = doc.meng;
+  for(let yy=rb.y0; yy<=rb.y1; yy++){
+    const rij = yy*w;
+    const by = Math.floor(yy/K);
+    for(let xx=rb.x0; xx<=rb.x1; xx++){
+      if(!m[rij+xx]) continue;
+      const bx = Math.floor(xx/K);
+      if(meng && ((bx+by)&1)) continue;          // mengstand: om-en-om blokken open
+      // hele korrelblokken krijgen dezelfde plek in het verloop
+      const cx = bx*K + (K-1)/2, cy = by*K + (K-1)/2;
+      let t = len2 ? ((cx-h.sx)*dx + (cy-h.sy)*dy) / len2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const pos = t*(n-1);
+      const i0 = Math.floor(pos);
+      const frac = pos - i0;
+      let hsh = (bx*73856093) ^ (by*19349663);
+      hsh = Math.imul(hsh ^ (hsh>>>13), 1274126177);
+      const r = ((hsh ^ (hsh>>>16)) >>> 0) / 4294967296;
+      data[rij+xx] = (i0 < n-1 && r < frac) ? kl[i0+1] : kl[i0];
+    }
+  }
+  ietsGezet = true;
+  bboxVoeg(strokeBbox, bb.x0, bb.y0); bboxVoeg(strokeBbox, bb.x1, bb.y1);
+  maakVuilRect(rb);
+}
+
 /* ---------- ongedaan maken: alleen de verschillen bewaren ----------
    Een heel kleed kopiëren per stap zou het geheugen opblazen. Daarom:
    na elke handeling vergelijken we de laag met hoe hij begon (alleen
@@ -1450,6 +1531,25 @@ weergave.addEventListener('pointerdown', e=>{
     if(gelukt){ undoPush(diffUitBbox(L, strokeKopie, strokeBbox)); vraagTeken(); bewaarStraks(); }
     return;
   }
+  if(t==='verloopvul'){
+    if(x<0||y<0||x>=doc.w||y>=doc.h) return;
+    tekenData = L.data;
+    strokeBbox = bboxUit(); ietsGezet = false;
+    strokeKopie.set(L.data);
+    const regio = vulMasker(x, y);
+    if(!regio) return;
+    // startkleur vooraan, daarna de rest van het palet in volgorde
+    const kl = regenboogKleuren();
+    const vi = kl.indexOf(doc.kleur);
+    haal = {soort:'verloopvul', type:e.pointerType, id:e.pointerId, vx:x, vy:y, sx:x, sy:y,
+            laag:L, voor:strokeKopie, masker:regio.m, mbbox:regio.bb,
+            kleuren: vi>0 ? kl.slice(vi).concat(kl.slice(0,vi)) : kl,
+            maat:doc.maat, kwast:doc.kwast, prevBbox:null, dx:0, dy:0,
+            stil:Date.now(), stilX:e.clientX, stilY:e.clientY};
+    verloopVulTeken(haal, x, y, false);   // zonder slepen: gewoon de startkleur
+    vraagTeken();
+    return;
+  }
 
   // alle teken-halen: kopie vooraf zodat we straks de verschillen kunnen bewaren
   tekenData = L.data;
@@ -1589,21 +1689,26 @@ weergave.addEventListener('pointermove', e=>{
      tussenliggend bewegings-event opnieuw de hele vorm hertekenen (dat was
      de bevriezer op kleedformaat). En alleen het zichtbare stuk live
      hercomponeren; de rest volgt in één keer bij het loslaten. */
-  if(PREVIEW_TOOLS.includes(haal.soort)){
+  if(PREVIEW_TOOLS.includes(haal.soort) || haal.soort==='verloopvul'){
     const [x,y] = schermNaarRaster(e);
     if(x!==haal.vx || y!==haal.vy){
       const s = haal.soort;
-      herstelRect(haal.laag, haal.voor, haal.prevBbox);
-      moveBbox = bboxUit();
-      if(s==='lijn') lijn(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
-      else if(s==='rechthoek'){
-        if(doc.gevuld) rechthoekGevuld(haal.sx, haal.sy, x, y, haal.kleur);
-        else rechthoek(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
-      }else if(s==='cirkel'){
-        if(doc.gevuld) ellipsGevuld(haal.sx, haal.sy, x, y, haal.kleur);
-        else cirkel(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
+      if(s==='verloopvul'){
+        // slepen bepaalt richting en lengte van het verloop
+        verloopVulTeken(haal, x, y, false);
+      }else{
+        herstelRect(haal.laag, haal.voor, haal.prevBbox);
+        moveBbox = bboxUit();
+        if(s==='lijn') lijn(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
+        else if(s==='rechthoek'){
+          if(doc.gevuld) rechthoekGevuld(haal.sx, haal.sy, x, y, haal.kleur);
+          else rechthoek(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
+        }else if(s==='cirkel'){
+          if(doc.gevuld) ellipsGevuld(haal.sx, haal.sy, x, y, haal.kleur);
+          else cirkel(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
+        }
+        haal.prevBbox = moveBbox; moveBbox = null;
       }
-      haal.prevBbox = moveBbox; moveBbox = null;
       haal.vx = x; haal.vy = y;
       beperkVuilTotZichtbaar();
     }
@@ -1717,10 +1822,13 @@ function haalCommit(){
       undoPush({type:'schuif', laag:haal.laag, dx:haal.dx, dy:haal.dy, bytes:64});
     }
   }else if(haal.soort!=='pan' && ietsGezet){
+    // verloopvul: tijdens het slepen alleen zichtbaar gerenderd — nu eerst
+    // het hele vlak definitief invullen, dan pas het verschil vastleggen
+    if(haal.soort==='verloopvul' && haal.masker) verloopVulTeken(haal, haal.vx, haal.vy, true);
     undoPush(diffUitBbox(haal.laag, haal.voor, strokeBbox));
     // tijdens het slepen van een vorm werd alleen het zichtbare stuk
     // hercomponeerd — nu het hele geraakte gebied alsnog bijwerken
-    if(PREVIEW_TOOLS.includes(haal.soort)) maakVuilRect(strokeBbox);
+    if(PREVIEW_TOOLS.includes(haal.soort) || haal.soort==='verloopvul') maakVuilRect(strokeBbox);
   }
   haal = null;
 }
@@ -1808,7 +1916,7 @@ function kwastVoorbeeld(){
   kwastVbCtx.fillStyle = '#fff'; kwastVbCtx.fillRect(0,0,W,H);
   const kleurTool = (doc.tool==='gum') ? 0 : doc.kleur;
   kwastVbCtx.fillStyle = doc.palet[kleurTool] || '#000';
-  const korrelTools = ['spuit','glitter','glittervul','vul'];
+  const korrelTools = ['spuit','glitter','glittervul','vul','verloopvul'];
   const isKorrel = korrelTools.includes(doc.tool);
   // footprint: bij gewone stiften de kwastvorm, bij korrel-gereedschap een blok
   const maat = Math.max(1, doc.maat);
