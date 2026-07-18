@@ -91,7 +91,8 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
 .laagItem .lnaam{ flex:1; font-size:10px; overflow:hidden; word-break:break-all; line-height:1.15; }
 .laagItem .ldek{ font-size:9px; color:#333; }
 #lagenKnoppen{ display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
-#lagenKnoppen .btn{ min-width:0; min-height:34px; padding:2px; font-size:14px; }
+#lagenKnoppen .btn{ min-width:0; min-height:40px; padding:2px; font-size:14px; flex-direction:column; gap:0; }
+#lagenKnoppen .btn small{ font-size:7px; }
 #dekRegel{ font-size:10px; color:#333; }
 #dekSchuif{ width:100%; height:34px; }
 
@@ -231,6 +232,8 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
   <button class="btn" id="kMeng" title="om-en-om pixels: 50/50 garenmix">▚<small>meng</small></button>
   <button class="btn" id="kSpiegelX" title="links-rechts spiegelen">⇋<small>spiegel</small></button>
   <button class="btn" id="kSpiegelY" title="boven-onder spiegelen">⇵<small>spiegel</small></button>
+  <div class="scheiding"></div>
+  <button class="btn" id="kInvert" title="alle paletkleuren worden hun negatief (nogmaals = terug)">🔄<small>invert</small></button>
 </div>
 
 <div id="midden">
@@ -255,7 +258,7 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <div class="kopje"></div>
     <button class="btn werktuig" data-tool="pipet">💧<small>pipet</small></button>
     <button class="btn werktuig" data-tool="schuif">✥<small>schuif laag</small></button>
-    <div class="kopje">bindingsstiften (kleur + volgende)</div>
+    <div class="kopje">bindingsstiften — kleur + volgende · dikte = patroonmaat</div>
     <button class="btn werktuig" data-tool="keper1">⟋<small>keper</small></button>
     <button class="btn werktuig" data-tool="keper2">⟍<small>keper</small></button>
     <button class="btn werktuig" data-tool="visgraat">⋀<small>visgraat</small></button>
@@ -274,12 +277,12 @@ body{ font-family:Tahoma, Verdana, sans-serif; font-size:13px; background:var(--
     <div class="kopje">lagen (boven = voorop)</div>
     <div id="lagenLijst"></div>
     <div id="lagenKnoppen">
-      <button class="btn" id="kLaagPlus" title="nieuwe laag">＋</button>
-      <button class="btn" id="kLaagDup" title="laag dupliceren">⧉</button>
-      <button class="btn" id="kLaagWeg" title="laag verwijderen">🗑</button>
-      <button class="btn" id="kLaagOp" title="laag naar voren">↑</button>
-      <button class="btn" id="kLaagNeer" title="laag naar achteren">↓</button>
-      <button class="btn" id="kLaagMerge" title="samenvoegen met laag eronder">⤵</button>
+      <button class="btn" id="kLaagPlus" title="nieuwe laag">＋<small>nieuw</small></button>
+      <button class="btn" id="kLaagDup" title="laag kopiëren">⧉<small>kopie</small></button>
+      <button class="btn" id="kLaagWeg" title="laag verwijderen">🗑<small>weg</small></button>
+      <button class="btn" id="kLaagOp" title="laag naar voren">↑<small>voor</small></button>
+      <button class="btn" id="kLaagNeer" title="laag naar achteren">↓<small>achter</small></button>
+      <button class="btn" id="kLaagMerge" title="samenvoegen met laag eronder">⤵<small>voeg</small></button>
     </div>
     <div id="dekRegel">dekking <span id="dekLabel">100%</span> (weefraster)
       <input type="range" id="dekSchuif" min="4" max="64" step="4" value="64">
@@ -878,14 +881,20 @@ function statusBij(){
 // ---------- bindingsstiften: rastervaste patronen met kleur A en B ----------
 // Rastervast = het patroon ligt op vaste plekken van het doek, dus twee
 // losse vlakken die je apart tekent sluiten naadloos op elkaar aan.
+// De dikte bepaalt óók de patroonmaat S: keperbanden, dambordblokken en
+// strepen worden S rasterpunten breed. Dikte 2 = de oude fijne binding;
+// grover weeft beter (een band van 2 px ≈ 1,4 mm zit op de weefgrens).
 const BINDINGEN = {
-  keper1:   (x,y,A,B)=> (((x+y)&3)<2) ? A : B,
-  keper2:   (x,y,A,B)=> (((x-y)&3)<2) ? A : B,
-  visgraat: (x,y,A,B)=>{ const d = ((x>>2)&1) ? (x-y) : (x+y); return ((d&3)<2) ? A : B; },
-  ruit:     (x,y,A,B)=> ((((x+y)&7)<4) !== (((x-y)&7)<4)) ? A : B,
-  dambord:  (x,y,A,B)=> ((((x>>1)+(y>>1))&1)) ? A : B,
-  strepenH: (x,y,A,B)=> (((y>>1)&1)) ? A : B,
-  strepenV: (x,y,A,B)=> (((x>>1)&1)) ? A : B,
+  keper1:   (x,y,A,B,S)=> (((x+y) % (2*S)) < S) ? A : B,
+  keper2:   (x,y,A,B,S)=> ((((x-y) % (2*S)) + 2*S) % (2*S) < S) ? A : B,
+  visgraat: (x,y,A,B,S)=>{
+    const d = (Math.floor(x/(2*S)) & 1) ? (x-y) : (x+y);
+    return ((((d % (2*S)) + 2*S) % (2*S)) < S) ? A : B;
+  },
+  ruit:     (x,y,A,B,S)=> (((((x+y) % (4*S)) + 4*S) % (4*S) < 2*S) !== ((((x-y) % (4*S)) + 4*S) % (4*S) < 2*S)) ? A : B,
+  dambord:  (x,y,A,B,S)=> ((Math.floor(x/S) + Math.floor(y/S)) & 1) ? A : B,
+  strepenH: (x,y,A,B,S)=> (Math.floor(y/S) & 1) ? A : B,
+  strepenV: (x,y,A,B,S)=> (Math.floor(x/S) & 1) ? A : B,
 };
 
 // ---------- de trechter: hier komt élke getekende pixel doorheen ----------
@@ -914,12 +923,14 @@ function zetPixel(x, y, kleur){
     if((Math.floor(x/K) + Math.floor(y/K)) & 1) return;
   }
   if(tekenPatroon){
+    const s = tekenPatroon.s || 2;
     if(tekenPatroon.eigen){
-      const v = tekenPatroon.p[((y&7)<<3)|(x&7)];
+      // elk patroon-celletje wordt s×s rasterpunten groot
+      const v = tekenPatroon.p[((Math.floor(y/s)&7)<<3)|(Math.floor(x/s)&7)];
       if(v===LEEG) return;                       // gat in het patroon: overslaan
       kleur = v;
     }else{
-      kleur = tekenPatroon.f(x, y, tekenPatroon.a, tekenPatroon.b);
+      kleur = tekenPatroon.f(x, y, tekenPatroon.a, tekenPatroon.b, s);
     }
   }
   if(kleur!==LEEG && kleur>=doc.palet.length) return;
@@ -1451,10 +1462,64 @@ let spuitTimer = null;
 let multiTik = null;    // kandidaat voor twee-/drievinger-tik (undo/redo)
 let drukTimer = null;   // vasthoud-pipet: stift stilhouden = kleur oppikken
 let snapTimer = null;   // kijkt of de pen na een haal stilgehouden wordt (haal → rechte lijn)
-// welke halen mogen bij stil vasthouden een rechte lijn worden: alles wat
-// rastervast of effen tekent (Procreate-truc uit PixelPaint); de
-// bindingsstiften doen mee omdat hun patroon vastligt op het doekraster
-const SNAP_TOOLS = ['pen','gum','eigenpat', ...Object.keys(BINDINGEN)];
+// welke halen mogen bij stil vasthouden een rechte lijn worden — vrijwel
+// alle stiften; elke stift tekent zijn eigen karakter dan strak langs de
+// lijn (alleen spuitbus/glitter niet: daar hoort stilhouden juist bij)
+const SNAP_TOOLS = ['pen','gum','eigenpat','regenboog','verloop','stippel','wiebel','koord',
+                    ...Object.keys(BINDINGEN)];
+
+/* De rechtgetrokken versie van een haal: gewone stiften worden één strakke
+   lijn, de speciale stiften leggen hun eigen patroon langs die lijn —
+   deterministisch, zodat het beeld niet flikkert terwijl je het eindpunt
+   nog versleept. */
+function tekenRechteLijn(h, x, y){
+  const soort = h.snapSoort;
+  if(!soort || soort==='pen' || soort==='gum' || soort==='wiebel'
+     || soort==='eigenpat' || BINDINGEN[soort]){
+    // effen of rastervast: het patroon (tekenPatroon) rekent zichzelf uit
+    lijn(h.sx, h.sy, x, y, h.maat, h.kleur, h.kwast);
+    return;
+  }
+  const dx = x - h.sx, dy = y - h.sy;
+  const lengte = Math.hypot(dx, dy);
+  if(soort==='koord'){
+    const dot = Math.max(1, Math.round(h.maat/3));
+    const n = Math.max(1, Math.ceil(lengte));
+    for(let k=0;k<=n;k++){
+      const px = h.sx + dx*k/n, py = h.sy + dy*k/n;
+      const hoek = k*0.5;
+      const rx = Math.cos(hoek)*h.maat, ry = Math.sin(hoek)*h.maat;
+      stempel(Math.round(px+rx), Math.round(py+ry), dot, h.kleurA, 'rond');
+      stempel(Math.round(px-rx), Math.round(py-ry), dot, h.kleurB, 'rond');
+    }
+    return;
+  }
+  // regenboog / verloop / stippel: in stukjes langs de lijn
+  const stap = (soort==='stippel') ? Math.max(3, h.maat*2) : Math.max(8, h.maat*2);
+  const segs = Math.max(1, Math.round(lengte/stap));
+  const kleuren = h.kleuren || regenboogKleuren();
+  const nKl = kleuren.length;
+  let vx = h.sx, vy = h.sy;
+  for(let i=1;i<=segs;i++){
+    const px = Math.round(h.sx + dx*i/segs), py = Math.round(h.sy + dy*i/segs);
+    let kleur = h.kleur, teken = true;
+    if(soort==='stippel'){
+      teken = (i % 2) === 1;                      // stukje wel, stukje niet
+    }else if(soort==='regenboog'){
+      kleur = kleuren[(i-1) % nKl];
+    }else if(soort==='verloop'){
+      // dezelfde reizende overgang als de losse verloopstift
+      const p = (lengte*i/segs) / Math.max(60, doc.pxcm*10);
+      const i0 = ((h.beginI||0) + Math.floor(p)) % nKl;
+      const i1 = (i0 + 1) % nKl;
+      let hsh = Math.imul(i ^ 0x9e3779b9, 2654435761);
+      const r = ((hsh ^ (hsh>>>16)) >>> 0) / 4294967296;
+      kleur = r < (p - Math.floor(p)) ? kleuren[i1] : kleuren[i0];
+    }
+    if(teken) lijn(vx, vy, px, py, h.maat, kleur, h.kwast);
+    vx = px; vy = py;
+  }
+}
 
 function schermNaarRaster(e){
   const r = weergave.getBoundingClientRect();
@@ -1581,7 +1646,8 @@ weergave.addEventListener('pointerdown', e=>{
       if(Math.abs(haal.vx-haal.sx) + Math.abs(haal.vy-haal.sy) < 3) return;   // een stipje is geen lijn
       herstelRect(haal.laag, haal.voor, strokeBbox);
       moveBbox = bboxUit();
-      lijn(haal.sx, haal.sy, haal.vx, haal.vy, haal.maat, haal.kleur, haal.kwast);
+      haal.snapSoort = haal.soort;             // de stift bepaalt hoe de rechte lijn eruitziet
+      tekenRechteLijn(haal, haal.vx, haal.vy);
       haal.prevBbox = moveBbox; moveBbox = null;
       haal.soort = 'lijn';
       clearInterval(snapTimer);
@@ -1597,8 +1663,8 @@ weergave.addEventListener('pointerdown', e=>{
     haal.afstand = 0;
   }
   if(t==='stippel'){ haal.stap = 0; }
-  if(BINDING_TOOLS.includes(t)){ tekenPatroon = {f:BINDINGEN[t], a:doc.kleur, b:volgendePaletKleur()}; }
-  if(t==='eigenpat'){ tekenPatroon = {eigen:true, p:doc.patronen[doc.patSlot]}; }
+  if(BINDING_TOOLS.includes(t)){ tekenPatroon = {f:BINDINGEN[t], a:doc.kleur, b:volgendePaletKleur(), s:korrel()}; }
+  if(t==='eigenpat'){ tekenPatroon = {eigen:true, p:doc.patronen[doc.patSlot], s:korrel()}; }
 
   if(t==='spuit' || t==='glitter'){
     if(t==='spuit') spuitPuf(x,y,maat,kleur); else glitterPuf(x,y);
@@ -1701,7 +1767,10 @@ weergave.addEventListener('pointermove', e=>{
       }else{
         herstelRect(haal.laag, haal.voor, haal.prevBbox);
         moveBbox = bboxUit();
-        if(s==='lijn') lijn(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
+        if(s==='lijn'){
+          if(haal.snapSoort) tekenRechteLijn(haal, x, y);   // gesnapte speciale stift
+          else lijn(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
+        }
         else if(s==='rechthoek'){
           if(doc.gevuld) rechthoekGevuld(haal.sx, haal.sy, x, y, haal.kleur);
           else rechthoek(haal.sx, haal.sy, x, y, haal.maat, haal.kleur, haal.kwast);
@@ -1957,6 +2026,20 @@ el('kGevuld').addEventListener('click', ()=>{ doc.gevuld=!doc.gevuld; knoppenBij
 el('kMeng').addEventListener('click', ()=>{ doc.meng=!doc.meng; knoppenBij(); statusBij(); bewaarStraks(); });
 el('kSpiegelX').addEventListener('click', ()=>{ doc.spiegelX=!doc.spiegelX; knoppenBij(); statusBij(); bewaarStraks(); });
 el('kSpiegelY').addEventListener('click', ()=>{ doc.spiegelY=!doc.spiegelY; knoppenBij(); statusBij(); bewaarStraks(); });
+el('kInvert').addEventListener('click', ()=>{
+  if(!doc) return;
+  // negatief: alle garens worden hun tegenkleur — nogmaals tikken draait het terug
+  const voor = doc.palet.slice();
+  doc.palet = doc.palet.map(hex=>{
+    const [r,g,b] = hexNaarRgb(hex);
+    return '#'+(((255-r)<<16) | ((255-g)<<8) | (255-b)).toString(16).padStart(6,'0');
+  });
+  paletPlatCache = null;
+  undoPush({type:'palet', voor, na:doc.palet.slice(), bytes:256});
+  herkleurAlles();
+  bouwStalen();
+  vraagTeken(); bewaarStraks();
+});
 el('kRaster').addEventListener('click', ()=>{ doc.raster=!doc.raster; knoppenBij(); vraagTeken(); });
 el('kWeef').addEventListener('click', ()=>{ weefAan=!weefAan; knoppenBij(); vraagTeken(); });
 el('kKaart').addEventListener('click', ()=>{ kaartAan=!kaartAan; knoppenBij(); vraagTeken(); });
