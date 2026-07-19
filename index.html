@@ -670,6 +670,9 @@ function vraagTeken(){
 // welk stuk van het doek is in beeld? (in rasterpunten)
 function zichtbareRect(){
   const r = weergave.getBoundingClientRect(), s = doc.schaal;
+  // canvas (nog) zonder maat — bijv. tab op de achtergrond: dan is "alles
+  // zichtbaar" de veilige aanname, anders slaan tussenrenders stil niets op
+  if(r.width < 2 || r.height < 2) return {x0:0, y0:0, x1:doc.w-1, y1:doc.h-1};
   return {
     x0: Math.max(0, Math.floor((-doc.offx)/s) - 1),
     y0: Math.max(0, Math.floor((-doc.offy)/s) - 1),
@@ -914,12 +917,19 @@ let moveBbox = null;          // alles wat déze beweging raakte (voor voorverto
 // de korrel: de gekozen dikte, gebruikt als rastervaste blokmaat door
 // spuitbus, glitter, glitteremmer en het mengraster
 function korrel(){ return Math.max(1, doc.maat); }
+/* Korrel op de teken-paden: bevroren per haal (een rustende vinger kan
+   mid-haal een dikteknop raken — palm rejection dekt alleen het canvas) en
+   begrensd zodat er altijd meerdere blokken op het doek passen. */
+function haalKorrel(){
+  const basis = (haal && haal.mengK) || korrel();
+  return Math.max(1, Math.min(basis, Math.floor(Math.min(doc.w, doc.h)/8) || 1));
+}
 
 function zetPixel(x, y, kleur){
   if(x<0 || x>=doc.w || y<0 || y>=doc.h) return;
   if(doc.meng){
     // om-en-om 50/50 garenmix — in blokken van de korrel (dikte 1 = per pixel)
-    const K = korrel();
+    const K = haalKorrel();
     if((Math.floor(x/K) + Math.floor(y/K)) & 1) return;
   }
   if(tekenPatroon){
@@ -1053,7 +1063,7 @@ function vulBaan(xa, xb, y, kleur){
     tekenData.fill(kleur, rij+xa, rij+xb+1);
   }else{
     // om-en-om in korrelblokken: alleen de 'aan'-blokken van deze rij vullen
-    const K = korrel();
+    const K = haalKorrel();
     const mengRij = Math.floor(y/K);
     let bx = Math.floor(xa/K);
     if((bx + mengRij) & 1) bx++;
@@ -1127,7 +1137,7 @@ function ellipsGevuld(x0,y0,x1,y1,kleur){
    Doordat de blokken op het doekraster liggen sluiten losse pufjes netjes
    op elkaar aan — zoals alles hier dat gespikkeld is. */
 function stempelKorrel(x, y, kleur){
-  const K = korrel();
+  const K = haalKorrel();
   const zet = (cx,cy)=>{
     const bx = Math.floor(cx/K)*K, by = Math.floor(cy/K)*K;
     for(let dy=0;dy<K;dy++) for(let dx=0;dx<K;dx++) zetPixel(bx+dx, by+dy, kleur);
@@ -1141,7 +1151,7 @@ function stempelKorrel(x, y, kleur){
 function spuitPuf(x,y,maat,kleur){
   const straal = maat*2+3;
   // grotere korrels dekken sneller, dus minder spikkels per puf
-  const n = Math.max(3, Math.round((5+maat*4)/korrel()));
+  const n = Math.max(3, Math.round((5+maat*4)/haalKorrel()));
   for(let i=0;i<n;i++){
     const hoek = Math.random()*Math.PI*2, afst = Math.random()*straal;
     stempelKorrel(Math.round(x+Math.cos(hoek)*afst), Math.round(y+Math.sin(hoek)*afst), kleur);
@@ -1155,7 +1165,7 @@ function volgendeRegenboog(){
 }
 function glitterPuf(x,y){
   const kleuren = regenboogKleuren();
-  const K = korrel();
+  const K = haalKorrel();
   const n = Math.max(3, Math.round(6/Math.sqrt(K))+1);
   for(let i=0;i<n;i++){
     const hoek = Math.random()*Math.PI*2, afst = Math.random()*(3+K*3);
@@ -1194,7 +1204,7 @@ function vloedVul(x, y, maakKleur, waardenSet){
   const past = waardenSet ? (v=>waardenSet.has(v)) : (v=>v===oud);
   const kleurVoor = maakKleur(oud);
   if(!kleurVoor) return false;
-  const meng = doc.meng, K = korrel();
+  const meng = doc.meng, K = haalKorrel();
   /* Scanline-vulling: hele horizontale banen tegelijk afwerken en per
      aangrenzende baan hooguit één startpunt op de stapel zetten. De stapel
      blijft dan duizenden keren kleiner dan bij pixel-voor-pixel vullen —
@@ -1261,7 +1271,7 @@ function glitterEmmer(x, y){
       if(!stok.length) stok = trio.slice().sort(()=>Math.random()-0.5);
       return stok.pop();
     };
-    const K = korrel();
+    const K = haalKorrel();
     if(K === 1) return trek;               // per pixel: geen blokadministratie nodig
     // grovere korrel: één kleur per K×K-blok, kaartspel-eerlijk verdeeld
     const blokken = new Map();
@@ -1329,7 +1339,7 @@ function verloopVulTeken(h, x, y, volledig){
   herstelRect(h.laag, h.voor, rb);
   const dx = x - h.sx, dy = y - h.sy;
   const len2 = dx*dx + dy*dy;
-  const K = korrel(), kl = h.kleuren, n = kl.length;
+  const K = (h.mengK || haalKorrel()), kl = h.kleuren, n = kl.length;
   const data = h.laag.data, w = doc.w, m = h.masker, meng = doc.meng;
   for(let yy=rb.y0; yy<=rb.y1; yy++){
     const rij = yy*w;
@@ -1610,8 +1620,9 @@ weergave.addEventListener('pointerdown', e=>{
     const vi = kl.indexOf(doc.kleur);
     haal = {soort:'verloopvul', type:e.pointerType, id:e.pointerId, vx:x, vy:y, sx:x, sy:y,
             laag:L, voor:strokeKopie, masker:regio.m, mbbox:regio.bb,
-            kleuren: vi>0 ? kl.slice(vi).concat(kl.slice(0,vi)) : kl,
-            maat:doc.maat, kwast:doc.kwast, prevBbox:null, dx:0, dy:0,
+            // ook de doekkleur mag vooraan staan — dan begint het verloop dáár
+            kleuren: vi>=0 ? kl.slice(vi).concat(kl.slice(0,vi)) : [doc.kleur].concat(kl),
+            maat:doc.maat, kwast:doc.kwast, prevBbox:null, dx:0, dy:0, mengK:haalKorrel(),
             stil:Date.now(), stilX:e.clientX, stilY:e.clientY};
     verloopVulTeken(haal, x, y, false);   // zonder slepen: gewoon de startkleur
     vraagTeken();
@@ -1627,7 +1638,7 @@ weergave.addEventListener('pointerdown', e=>{
   const maat  = (t==='gum') ? Math.max(doc.maat,2) : doc.maat;
   const kwast = (t==='gum') ? 'vierkant' : (doc.kwast||'vierkant');
   haal = {soort:t, type:e.pointerType, id:e.pointerId, vx:x, vy:y, sx:x, sy:y, kleur, maat, kwast,
-          laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0,
+          laag:L, voor:strokeKopie, prevBbox:null, dx:0, dy:0, mengK:haalKorrel(),
           stil:Date.now(), stilX:e.clientX, stilY:e.clientY};
   if(t==='koord'){
     // twee garens die om je lijn heen draaien — als een getwijnd koord
@@ -1663,8 +1674,8 @@ weergave.addEventListener('pointerdown', e=>{
     haal.afstand = 0;
   }
   if(t==='stippel'){ haal.stap = 0; }
-  if(BINDING_TOOLS.includes(t)){ tekenPatroon = {f:BINDINGEN[t], a:doc.kleur, b:volgendePaletKleur(), s:korrel()}; }
-  if(t==='eigenpat'){ tekenPatroon = {eigen:true, p:doc.patronen[doc.patSlot], s:korrel()}; }
+  if(BINDING_TOOLS.includes(t)){ tekenPatroon = {f:BINDINGEN[t], a:doc.kleur, b:volgendePaletKleur(), s:haalKorrel()}; }
+  if(t==='eigenpat'){ tekenPatroon = {eigen:true, p:doc.patronen[doc.patSlot], s:haalKorrel()}; }
 
   if(t==='spuit' || t==='glitter'){
     if(t==='spuit') spuitPuf(x,y,maat,kleur); else glitterPuf(x,y);
@@ -1892,14 +1903,17 @@ function haalCommit(){
       maakVuilAlles();
       undoPush({type:'schuif', laag:haal.laag, dx:haal.dx, dy:haal.dy, bytes:64});
     }
-  }else if(haal.soort!=='pan' && ietsGezet){
+  }else if(haal.soort!=='pan'){
     // verloopvul: tijdens het slepen alleen zichtbaar gerenderd — nu eerst
     // het hele vlak definitief invullen, dan pas het verschil vastleggen
+    // (ongeacht ietsGezet: tussenrenders kunnen buiten beeld gevallen zijn)
     if(haal.soort==='verloopvul' && haal.masker) verloopVulTeken(haal, haal.vx, haal.vy, true);
-    undoPush(diffUitBbox(haal.laag, haal.voor, strokeBbox));
-    // tijdens het slepen van een vorm werd alleen het zichtbare stuk
-    // hercomponeerd — nu het hele geraakte gebied alsnog bijwerken
-    if(PREVIEW_TOOLS.includes(haal.soort) || haal.soort==='verloopvul') maakVuilRect(strokeBbox);
+    if(ietsGezet){
+      undoPush(diffUitBbox(haal.laag, haal.voor, strokeBbox));
+      // tijdens het slepen van een vorm werd alleen het zichtbare stuk
+      // hercomponeerd — nu het hele geraakte gebied alsnog bijwerken
+      if(PREVIEW_TOOLS.includes(haal.soort) || haal.soort==='verloopvul') maakVuilRect(strokeBbox);
+    }
   }
   haal = null;
 }
@@ -2135,6 +2149,7 @@ function thumbsVervers(){
 
 // structuurwijziging aan de lagen: voor/na bewaren voor ongedaan maken
 function lagenActie(fn, bytes){
+  haalCommit();   // een nog lopende haal eerst afronden (tweede vinger op een laagknop)
   const voor = {lijst: doc.lagen.slice(), actief: doc.actief};
   if(fn()===false) return;
   const na = {lijst: doc.lagen.slice(), actief: doc.actief};
