@@ -1425,6 +1425,8 @@ function pasToe(e, kant){
     maakVuilAlles();
   }else if(e.type==='palet'){
     doc.palet = (kant==='voor' ? e.voor : e.na).slice();
+    // de tekenkleur kan op een net verdwenen staal staan (undo van ＋ kleur)
+    if(doc.kleur >= doc.palet.length) doc.kleur = doc.palet.length-1;
     herkleurAlles();
     bouwStalen();
   }else if(e.type==='veld'){
@@ -1949,6 +1951,8 @@ document.addEventListener('touchmove', e=>{ if(e.target===weergave) e.preventDef
 // sneltoetsen voor als er een toetsenbord aanhangt
 document.addEventListener('keydown', e=>{
   if(!(e.metaKey || e.ctrlKey)) return;
+  if(haal) return;                 // tijdens een haal geen toetsenbord-undo:
+                                   // dat zou onder de lopende streek door schrijven
   const k = e.key.toLowerCase();   // met Shift erbij is e.key 'Z', niet 'z'
   if(k==='z' && !e.shiftKey){ e.preventDefault(); ongedaan(); }
   else if(k==='z' || k==='y'){ e.preventDefault(); opnieuw(); }
@@ -2307,6 +2311,9 @@ el('kKleurMin').addEventListener('click', ()=>{
       }
     }
   }
+  // en de onthouden glittertrio's: anders vreet een her-vulling straks door
+  // vlakken van de kleur die later op deze paletplek komt
+  doc.trios = (doc.trios||[]).filter(t=>!t.includes(idx));
   bouwStalen(); bewaarStraks();
 });
 el('kKleurBewerk').addEventListener('click', ()=>kleurKiezerOpen(doc.kleur));
@@ -2939,13 +2946,16 @@ function galerijToon(){
       const laad = document.createElement('button');
       laad.className = 'btn'; laad.textContent = 'Laden';
       laad.addEventListener('click', ()=>{
-        try{
-          doc = herstelDoc(item.doc);
+        // vers uit de opslag halen — het closure-item kan al gemuteerd zijn
+        // als dit kleed eerder deze sessie geladen en bewerkt is
+        dbDoe('galerij','readonly', s=>s.get(item.id)).then(vers=>{
+          if(!vers) throw new Error('weg');
+          doc = herstelDoc(vers.doc);
           naDocWissel();
           galerijSluier.classList.remove('zichtbaar');
-        }catch(err){
+        }).catch(()=>{
           melding('Dit galerij-kleed kan niet geladen worden (beschadigd opgeslagen?).');
-        }
+        });
       });
       const weg = document.createElement('button');
       weg.className = 'btn'; weg.textContent = '🗑';
