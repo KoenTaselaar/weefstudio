@@ -813,13 +813,19 @@ function kaartMaat(){
   kaart.style.height = kaart.height+'px';
 }
 const kaartBasis = document.createElement('canvas');   // gecachet verkleind beeld
+let kaartLaatst = 0;   // wanneer het beeldje voor het laatst herbouwd is
 function kaartTeken(){
   kaartVak.classList.toggle('zichtbaar', kaartAan && !!doc);
   if(!kaartAan || !doc) return;
-  // het hele doek verkleinen is duur — alleen doen als het beeld echt veranderde,
-  // het kadertje eroverheen is wél elk frame goedkoop
-  if(kaartVuil || kaartBasis.width !== kaart.width || kaartBasis.height !== kaart.height){
+  /* Het hele doek verkleinen is duur (10-40 ms op een iPad) — tijdens een
+     pennenstreek is élk frame vuil, dus zonder rem zou de minimap de hele
+     vuile-rechthoek-winst weer opeten. Hooguit vier keer per seconde
+     herbouwen; het kadertje eroverheen is wél elk frame goedkoop. */
+  if(kaartVuil && performance.now() - kaartLaatst < 250){
+    vraagTeken();   // kom straks terug voor de uitgestelde herbouw
+  }else if(kaartVuil || kaartBasis.width !== kaart.width || kaartBasis.height !== kaart.height){
     kaartVuil = false;
+    kaartLaatst = performance.now();
     kaartBasis.width = kaart.width; kaartBasis.height = kaart.height;
     const bctx = kaartBasis.getContext('2d');
     bctx.imageSmoothingEnabled = true;
@@ -1273,13 +1279,18 @@ function glitterEmmer(x, y){
     };
     const K = haalKorrel();
     if(K === 1) return trek;               // per pixel: geen blokadministratie nodig
-    // grovere korrel: één kleur per K×K-blok, kaartspel-eerlijk verdeeld
-    const blokken = new Map();
+    /* Grovere korrel: één kleur per K×K-blok via een vaste hash per blok —
+       alle pixels van een blok krijgen dezelfde loting zonder de blokken-Map
+       die op kleedformaat honderden MB piekgeheugen kostte (Safari-crash).
+       Het zout maakt elke vulling anders; de verdeling is statistisch
+       i.p.v. kaartspel-exact — visueel niet te onderscheiden. */
+    const zout = (Math.random()*0x7fffffff)|0;
     return (px,py)=>{
-      const sleutel = Math.floor(py/K)*65536 + Math.floor(px/K);
-      let k = blokken.get(sleutel);
-      if(k === undefined){ k = trek(); blokken.set(sleutel, k); }
-      return k;
+      const bx = Math.floor(px/K), by = Math.floor(py/K);
+      let h = (bx*73856093) ^ (by*19349663) ^ zout;
+      h = Math.imul(h ^ (h>>>13), 1274126177);
+      const r = ((h ^ (h>>>16)) >>> 0) / 4294967296;
+      return trio[Math.floor(r*trio.length)];
     };
   }, waardenSet);
   if(gelukt) onthoudTrio(trio);
@@ -1427,6 +1438,9 @@ function pasToe(e, kant){
     doc.palet = (kant==='voor' ? e.voor : e.na).slice();
     // de tekenkleur kan op een net verdwenen staal staan (undo van ＋ kleur)
     if(doc.kleur >= doc.palet.length) doc.kleur = doc.palet.length-1;
+    // en patronen/glittertrio's kunnen naar verdwenen plekken wijzen
+    doc.patronen.forEach(p=>{ for(let i=0;i<64;i++) if(p[i]!==LEEG && p[i]>=doc.palet.length) p[i]=LEEG; });
+    doc.trios = (doc.trios||[]).filter(t=>t.every(k=>k<doc.palet.length));
     herkleurAlles();
     bouwStalen();
   }else if(e.type==='veld'){
@@ -1770,13 +1784,19 @@ weergave.addEventListener('pointermove', e=>{
      tussenliggend bewegings-event opnieuw de hele vorm hertekenen (dat was
      de bevriezer op kleedformaat). En alleen het zichtbare stuk live
      hercomponeren; de rest volgt in één keer bij het loslaten. */
-  if(PREVIEW_TOOLS.includes(haal.soort) || haal.soort==='verloopvul'){
+  if(PREVIEW_TOOLS.includes(haal.soort) || haal.soort==='verloopvul' || haal.soort==='schuif'){
     const [x,y] = schermNaarRaster(e);
     if(x!==haal.vx || y!==haal.vy){
       const s = haal.soort;
       if(s==='verloopvul'){
         // slepen bepaalt richting en lengte van het verloop
         verloopVulTeken(haal, x, y, false);
+      }else if(s==='schuif'){
+        // ook hier telt alleen de laatste vingerpositie: elke aanroep
+        // herschrijft de héle laag, dus tussenstapjes zijn weggegooid werk
+        haal.dx = x-haal.sx; haal.dy = y-haal.sy;
+        verschuifVanBron(haal.laag, haal.voor, haal.dx, haal.dy);
+        maakVuilRect(zichtbareRect());
       }else{
         herstelRect(haal.laag, haal.voor, haal.prevBbox);
         moveBbox = bboxUit();
@@ -1803,11 +1823,7 @@ weergave.addEventListener('pointermove', e=>{
   for(const ev of stappen){
     const [x,y] = schermNaarRaster(ev);
     const s = haal.soort;
-    if(s==='schuif'){
-      haal.dx = x-haal.sx; haal.dy = y-haal.sy;
-      verschuifVanBron(haal.laag, haal.voor, haal.dx, haal.dy);
-      maakVuilRect(zichtbareRect());   // alleen het zichtbare stuk live bijwerken
-    }else if(s==='spuit'){
+    if(s==='spuit'){
       spuitPuf(x, y, haal.maat, haal.kleur);
     }else if(s==='glitter'){
       glitterPuf(x, y);
@@ -1953,6 +1969,9 @@ document.addEventListener('keydown', e=>{
   if(!(e.metaKey || e.ctrlKey)) return;
   if(haal) return;                 // tijdens een haal geen toetsenbord-undo:
                                    // dat zou onder de lopende streek door schrijven
+  // ook niet met een open dialoog (kleurkiezer!): undo zou het palet onder
+  // de kiezer vandaan trekken en kpPaletVoor/bewerkIndex kloppen dan niet meer
+  if(document.querySelector('.sluier.zichtbaar')) return;
   const k = e.key.toLowerCase();   // met Shift erbij is e.key 'Z', niet 'z'
   if(k==='z' && !e.shiftKey){ e.preventDefault(); ongedaan(); }
   else if(k==='z' || k==='y'){ e.preventDefault(); opnieuw(); }
@@ -2233,13 +2252,17 @@ el('dekSchuif').addEventListener('input', ()=>{
   if(dekVoor === null) dekVoor = L.dek;
   L.dek = +el('dekSchuif').value;
   el('dekLabel').textContent = dekPct(L.dek);
-  maakVuilAlles(); vraagTeken(); bewaarStraks();
+  // tijdens het slepen alleen het zichtbare stuk hercomponeren — het hele
+  // kleed per schuifstapje doorrekenen zette de boel vast op groot formaat
+  maakVuilAlles(); beperkVuilTotZichtbaar();
+  vraagTeken(); bewaarStraks();
 });
 el('dekSchuif').addEventListener('change', ()=>{
   const L = actieveLaag();
   if(dekVoor !== null && dekVoor !== L.dek)
     undoPush({type:'veld', laag:L, veld:'dek', voor:dekVoor, na:L.dek, bytes:64});
   dekVoor = null;
+  maakVuilAlles(); vraagTeken();   // losgelaten: nu wel de volledige pas
   bouwLagen();
 });
 
@@ -2272,6 +2295,7 @@ function bouwStalen(){
 el('kKleurPlus').addEventListener('click', ()=>{
   if(doc.palet.length >= MAX_KLEUREN){ melding('Maximaal '+MAX_KLEUREN+' kleuren — meer bindingen kan het lab niet kwijt.'); return; }
   paletVoorNieuw = doc.palet.slice();
+  kleurVoorPlus = doc.kleur;              // om bij Annuleer naar terug te keren
   doc.palet.push('#9a9a9a');
   doc.kleur = doc.palet.length-1;
   paletPlatCache = null;
@@ -2329,6 +2353,7 @@ const MSPAINT_KLEUREN = [
 let kp = {h:0, s:0, l:50};
 let kpPaletVoor = null;       // palet vóór het bewerken (voor ongedaan maken)
 let paletVoorNieuw = null;    // palet vóór "+ kleur" (voor annuleren)
+let kleurVoorPlus = 0;        // tekenkleur vóór "+ kleur" (voor annuleren)
 
 function hslNaarHex(h, s, l){
   s/=100; l/=100;
@@ -2363,7 +2388,7 @@ function kleurKiezerOpen(index, nieuw){
   kp = hexNaarHsl(doc.palet[index]);
   // is er al met deze kleur getekend? dan blijft bestaand werk STANDAARD
   // in de oude kleur; de garenwissel is de uitzondering (vinkje aan)
-  kpInGebruik = !nieuw && kleurInGebruik(index);
+  kpInGebruik = !nieuw && (kleurInGebruik(index) || doc.patronen.some(p=>p.includes(index)));
   el('kpWisselRegel').style.display = kpInGebruik ? '' : 'none';
   el('kpWissel').checked = false;
   kpToon();
@@ -2372,9 +2397,10 @@ function kleurKiezerOpen(index, nieuw){
 
 // wordt deze paletkleur ergens op een laag gebruikt?
 function kleurInGebruik(idx){
+  // native indexOf scant een Uint8Array vele malen sneller dan een JS-lus —
+  // dit draait bij elk openen van de kleurkiezer, dus dat telt op kleedformaat
   for(const L of doc.lagen){
-    const d = L.data;
-    for(let i=0;i<d.length;i++) if(d[i]===idx) return true;
+    if(L.data.indexOf(idx) !== -1) return true;
   }
   return false;
 }
@@ -2454,7 +2480,10 @@ el('kpOk').addEventListener('click', ()=>{
     doc.palet[bewerkIndex] = gekozen;
   }
   paletPlatCache = null;
-  undoPush({type:'palet', voor:kpPaletVoor, na:doc.palet.slice(), bytes:256});
+  // alleen een ongedaan-stap als er echt iets veranderde — een kijk-OK
+  // zou anders via undoPush de redo-geschiedenis wissen
+  if(kpPaletVoor.join(',') !== doc.palet.join(','))
+    undoPush({type:'palet', voor:kpPaletVoor, na:doc.palet.slice(), bytes:256});
   herkleurAlles();              // de volledige kleurpas (tijdens het schuiven deden we alleen het zichtbare stuk)
   bouwStalen();
   kleurSluier.classList.remove('zichtbaar');
@@ -2462,7 +2491,9 @@ el('kpOk').addEventListener('click', ()=>{
 });
 el('kpAnnuleer').addEventListener('click', ()=>{
   doc.palet = kpPaletVoor.slice();
-  if(doc.kleur >= doc.palet.length) doc.kleur = doc.palet.length-1;
+  // na een geannuleerde ＋ hoort de tekenkleur terug naar wat hij wás,
+  // niet naar het toevallig laatste staal
+  if(doc.kleur >= doc.palet.length) doc.kleur = Math.min(kleurVoorPlus, doc.palet.length-1);
   herkleurAlles();
   bouwStalen(); vraagTeken();
   kleurSluier.classList.remove('zichtbaar');
@@ -2662,6 +2693,13 @@ function dbDoe(store, modus, fn){
 let bewaarTimer = null;
 function werkBewaar(d){
   if(!d) return;
+  /* Staat de kleurkiezer open, dan kan doc.palet een líve voorproef bevatten
+     (garenwissel-schuiven of een nog niet bevestigde ＋kleur). Die mag niet in
+     de opslag belanden: na een tab-kill zou Annuleer niet meer bestaan en de
+     voorproef permanent zijn. Bewaar dan de vóór-stand van het palet. */
+  if(d === doc && kpPaletVoor && kleurSluier.classList.contains('zichtbaar')){
+    d = {...d, palet: kpPaletVoor.slice()};
+  }
   dbDoe('werk','readwrite', s=>s.put(d, 'huidig')).catch(()=>{ /* opslag vol of geblokkeerd — geen ramp */ });
 }
 function bewaarStraks(){
@@ -2669,7 +2707,11 @@ function bewaarStraks(){
   const d = doc;   // nú vastleggen — niet pas als de timer vuurt (documentwissel!)
   // 3 s: het wegschrijven van een heel kleed (structured clone van alle lagen)
   // is niet gratis, dus niet bij elke pennenstreek opnieuw
-  bewaarTimer = setTimeout(()=>{ if(d===doc) werkBewaar(d); thumbsVervers(); }, 3000);
+  bewaarTimer = setTimeout(()=>{
+    if(haal){ bewaarStraks(); return; }   // niet mídden in een pennenstreek klonen
+    if(d===doc) werkBewaar(d);
+    thumbsVervers();
+  }, 3000);
 }
 function bewaarDirect(){
   clearTimeout(bewaarTimer);
@@ -2837,19 +2879,22 @@ function redmean(r1,g1,b1,r2,g2,b2){
   const rm=(r1+r2)/2, dr=r1-r2, dg=g1-g2, db=b1-b2;
   return (2+rm/256)*dr*dr + 4*dg*dg + (2+(255-rm)/256)*db*db;
 }
-// dichtstbijzijnde paletkleur (redmean), met geheugen zodat elke unieke
-// bronkleur maar één keer gezocht wordt — gedeeld door beide importwegen
-function dichtstbijIndex(r, g, b, pRgb, kaartje){
-  const s = (r<<16)|(g<<8)|b;
-  let idx = kaartje.get(s);
-  if(idx === undefined){
+/* Dichtstbijzijnde paletkleur (redmean) per 15-bit kleurbakje, met een
+   typed-array-cache van vaste grootte — gedeeld door beide importwegen.
+   Een foto heeft al gauw miljoenen unieke kleuren; een Map dáárop kostte
+   honderden MB. 32 niveaus per kanaal is ruim genoeg om naar een palet
+   van hooguit 28 kleuren te mappen. */
+function dichtstbijPerBak(r, g, b, pRgb, bakCache){
+  const bak = ((r>>3)<<10)|((g>>3)<<5)|(b>>3);
+  let idx = bakCache[bak];
+  if(idx < 0){
     let bestA = Infinity;
     idx = 0;
     for(let j=0;j<pRgb.length;j++){
       const a = redmean(r,g,b, pRgb[j][0],pRgb[j][1],pRgb[j][2]);
       if(a<bestA){ bestA=a; idx=j; }
     }
-    kaartje.set(s, idx);
+    bakCache[bak] = idx;
   }
   return idx;
 }
@@ -2869,18 +2914,26 @@ function afbeeldingPixels(img, maxW, maxH, maxPx){
 function importAlsNieuw(){
   const pxcm = doc ? doc.pxcm : PXCM_STANDAARD;
   const {w, h, px} = afbeeldingPixels(importAfbeelding, 6000, 9000, MAX_PX);
-  const tel = new Map();
+  // tellen in 32.768 vaste kleurbakjes (15-bit) i.p.v. een Map per unieke
+  // kleur — foto's hebben er miljoenen en dat werd een geheugenpiek
+  const tel = new Uint32Array(32768);
+  const voorbeeld = new Int32Array(32768).fill(-1);   // échte kleur per bakje
   for(let i=0;i<w*h;i++){
-    const s = (px[i*4]<<16)|(px[i*4+1]<<8)|px[i*4+2];
-    tel.set(s, (tel.get(s)||0)+1);
+    const r2=px[i*4], g2=px[i*4+1], b2=px[i*4+2];
+    const bak = ((r2>>3)<<10)|((g2>>3)<<5)|(b2>>3);
+    tel[bak]++;
+    if(voorbeeld[bak] < 0) voorbeeld[bak] = (r2<<16)|(g2<<8)|b2;
   }
-  const top = [...tel.entries()].sort((a,b)=>b[1]-a[1]).slice(0, MAX_KLEUREN).map(e=>e[0]);
+  const bakken = [];
+  for(let b2=0;b2<32768;b2++) if(tel[b2]) bakken.push(b2);
+  bakken.sort((a,b)=>tel[b]-tel[a]);
+  const top = bakken.slice(0, MAX_KLEUREN).map(b2=>voorbeeld[b2]);
   const palet = top.map(s=>'#'+s.toString(16).padStart(6,'0'));
   const pRgb = top.map(s=>[(s>>16)&255,(s>>8)&255,s&255]);
-  const kaartje = new Map(top.map((s,i)=>[s,i]));
+  const bakCache = new Int16Array(32768).fill(-1);
   const data = new Uint8Array(w*h);
   for(let i=0;i<w*h;i++){
-    data[i] = dichtstbijIndex(px[i*4], px[i*4+1], px[i*4+2], pRgb, kaartje);
+    data[i] = dichtstbijPerBak(px[i*4], px[i*4+1], px[i*4+2], pRgb, bakCache);
   }
   while(palet.length<2) palet.push('#1a1a1a');
   doc = nieuwDoc(w, h, pxcm, palet, 'import');
@@ -2898,7 +2951,7 @@ function importAlsLaag(){
   const dw = Math.max(1, Math.round(w*f)), dh = Math.max(1, Math.round(h*f));
   const ox = Math.floor((doc.w-dw)/2), oy = Math.floor((doc.h-dh)/2);
   const pRgb = doc.palet.map(hexNaarRgb);
-  const kaartje = new Map();
+  const bakCache = new Int16Array(32768).fill(-1);
   lagenActie(()=>{
     const L = nieuweLaag('import', doc.w, doc.h);
     for(let y=0;y<dh;y++){
@@ -2906,7 +2959,7 @@ function importAlsLaag(){
       for(let x=0;x<dw;x++){
         const sx = Math.floor(x/dw*w);
         const i = (sy*w+sx)*4;
-        L.data[(oy+y)*doc.w + (ox+x)] = dichtstbijIndex(px[i], px[i+1], px[i+2], pRgb, kaartje);
+        L.data[(oy+y)*doc.w + (ox+x)] = dichtstbijPerBak(px[i], px[i+1], px[i+2], pRgb, bakCache);
       }
     }
     doc.lagen.splice(doc.actief+1, 0, L);

@@ -1,4 +1,4 @@
-const CACHE = 'weefstudio-v14';
+const CACHE = 'weefstudio-v15';
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE)
     .then(c=>c.addAll(['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png']))
