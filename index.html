@@ -1299,7 +1299,7 @@ function glitterEmmer(x, y){
 
 /* ---------- verloopvul: tik in een vlak, sleep de richting ----------
    Bepaalt eerst (net als de emmer) het zichtbaar begrensde vlak, en vult
-   dat met een gestrooid verloop door de paletkleuren: je sleep bepaalt
+   dat met een banden-verloop door de paletkleuren: je sleep bepaalt
    richting en lengte van de overgang. Rastervast per korrelblok. */
 // het aaneengesloten vlak rond (x,y) op het zichtbare beeld, als masker
 function vulMasker(x, y){
@@ -1335,9 +1335,10 @@ function vulMasker(x, y){
 
 /* het verloop in het masker tekenen, met (x,y) als sleep-eindpunt.
    Tijdens het slepen alleen het zichtbare stuk (snel); bij het loslaten
-   nog één keer volledig. De strooi-loting per korrelblok komt uit een
-   vaste hash van de blokcoördinaten: slepen verschuift alleen de overgang,
-   het spikkelpatroon zelf flikkert niet. */
+   nog één keer volledig. Het verloop is een BANDEN-verloop zoals in
+   geweven werk: elke kleur een egale band, en op elke grens een
+   dambord-zone waar de twee buurkleuren om-en-om schaakborden —
+   rastervast per korrelblok, rustig en telbaar (geen strooi-ruis). */
 function verloopVulTeken(h, x, y, volledig){
   const bb = h.mbbox;
   let rb = bb;
@@ -1366,10 +1367,16 @@ function verloopVulTeken(h, x, y, volledig){
       const pos = t*(n-1);
       const i0 = Math.floor(pos);
       const frac = pos - i0;
-      let hsh = (bx*73856093) ^ (by*19349663);
-      hsh = Math.imul(hsh ^ (hsh>>>13), 1274126177);
-      const r = ((hsh ^ (hsh>>>16)) >>> 0) / 4294967296;
-      data[rij+xx] = (i0 < n-1 && r < frac) ? kl[i0+1] : kl[i0];
+      // banden-indeling per kleurovergang: eerst egaal deze kleur, in het
+      // midden (30%-70%) een dambord van beide buurkleuren, dan egaal de
+      // volgende. In de mengstand blijven om-en-om blokken open — het
+      // dambord schaakbordt dan over de overgebleven blokken (gewone
+      // parity zou daar alles dezelfde kleur geven).
+      let kleurI;
+      if(i0 >= n-1 || frac < 0.3) kleurI = kl[i0];
+      else if(frac > 0.7) kleurI = kl[i0+1];
+      else kleurI = ((meng ? (bx+by)>>1 : bx+by) & 1) ? kl[i0+1] : kl[i0];
+      data[rij+xx] = kleurI;
     }
   }
   ietsGezet = true;
@@ -1547,6 +1554,48 @@ function tekenRechteLijn(h, x, y){
   }
 }
 
+/* Vormherkenning à la Procreate QuickShape: teken in één haal een ruwe
+   cirkel of rechthoek, hou de pen even stil, en de vorm springt strak
+   (en blijft aan de hoek sleepbaar zolang je vasthoudt). We meten hoe
+   goed het getekende pad past bij twee kandidaten binnen zijn omsluitende
+   rechthoek: de rechthoek zelf (punten dicht bij de vier randen, alle
+   hoeken aangedaan) of de ingeschreven ellips. Niet gesloten getekend →
+   de rechte lijn van vroeger. Wél gesloten maar te grillig → niets doen:
+   die kromme was vast expres. Alleen voor de effen/rastervaste stiften;
+   de karakterstiften (regenboog, koord, …) houden hun lijn-snap. */
+const VORM_SNAP = ['pen','gum','wiebel','eigenpat', ...Object.keys(BINDINGEN)];
+function herkenVorm(pad){
+  if(!pad || pad.length < 12) return 'lijn';
+  let x0=1e9, y0=1e9, x1=-1e9, y1=-1e9;
+  for(const p of pad){
+    if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0];
+    if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1];
+  }
+  const w=x1-x0, h=y1-y0, rx=w/2, ry=h/2, kort=Math.min(rx,ry);
+  if(Math.min(w,h) < 8) return 'lijn';                  // zo plat is het een lijn
+  const a=pad[0], b=pad[pad.length-1];
+  if(Math.hypot(a[0]-b[0], a[1]-b[1]) > Math.max(6, Math.hypot(w,h)*0.3))
+    return 'lijn';                                      // begin en eind te ver uiteen: open haal
+  const cx=(x0+x1)/2, cy=(y0+y1)/2, grens=kort*0.35;
+  let somE=0, somR=0;
+  const hoek=[0,0,0,0];
+  for(const p of pad){
+    const px=p[0], py=p[1];
+    somE += Math.abs(Math.hypot((px-cx)/rx, (py-cy)/ry) - 1);   // afwijking van de ellips
+    somR += Math.min(px-x0, x1-px, py-y0, y1-py) / kort;        // afstand tot dichtstbijzijnde rand
+    if(Math.hypot(px-x0,py-y0)<grens) hoek[0]=1;
+    if(Math.hypot(px-x1,py-y0)<grens) hoek[1]=1;
+    if(Math.hypot(px-x0,py-y1)<grens) hoek[2]=1;
+    if(Math.hypot(px-x1,py-y1)<grens) hoek[3]=1;
+  }
+  const scoreE = somE/pad.length, scoreR = somR/pad.length;
+  const hoeken = hoek[0]+hoek[1]+hoek[2]+hoek[3];
+  if(hoeken >= 3 && scoreR < 0.18) return {soort:'rechthoek', x0, y0, x1, y1};
+  if(scoreE < 0.22 && scoreE < scoreR) return {soort:'cirkel', x0, y0, x1, y1};
+  if(scoreR < 0.12) return {soort:'rechthoek', x0, y0, x1, y1};
+  return null;
+}
+
 function schermNaarRaster(e){
   const r = weergave.getBoundingClientRect();
   const x = (e.clientX - r.left - doc.offx) / doc.schaal;
@@ -1664,19 +1713,39 @@ weergave.addEventListener('pointerdown', e=>{
   }
   if(SNAP_TOOLS.includes(t)){
     /* Stil vasthouden (0,6 s) na een haal: de kromme haal wordt een strakke
-       lijn, en zolang je vasthoudt blijft het eindpunt sleepbaar (Procreate).
-       De haal verandert daarvoor gewoon in een lopende lijn-voorvertoning. */
+       lijn — of, als je een gesloten rondje/hoekige vorm tekende, een
+       strakke cirkel of rechthoek (herkenVorm). Zolang je vasthoudt blijft
+       het eindpunt/de hoek sleepbaar (Procreate). De haal verandert daarvoor
+       gewoon in een lopende lijn-/vorm-voorvertoning. */
+    haal.pad = [[x,y]];        // het afgelegde pad, voor de vormherkenning
     clearInterval(snapTimer);
     snapTimer = setInterval(()=>{
       if(!haal || !SNAP_TOOLS.includes(haal.soort)) return;
       if(Date.now() - haal.stil < 600) return;                                // nog niet lang genoeg stil
-      if(Math.abs(haal.vx-haal.sx) + Math.abs(haal.vy-haal.sy) < 3) return;   // een stipje is geen lijn
+      const vorm = VORM_SNAP.includes(haal.soort) ? herkenVorm(haal.pad) : 'lijn';
+      if(vorm === null){ haal.stil = Date.now(); return; }                    // expres grillig: laat staan, klok opnieuw
+      if(vorm === 'lijn' && Math.abs(haal.vx-haal.sx) + Math.abs(haal.vy-haal.sy) < 3) return;   // een stipje is geen lijn
       herstelRect(haal.laag, haal.voor, strokeBbox);
       moveBbox = bboxUit();
-      haal.snapSoort = haal.soort;             // de stift bepaalt hoe de rechte lijn eruitziet
-      tekenRechteLijn(haal, haal.vx, haal.vy);
+      if(vorm === 'lijn'){
+        haal.snapSoort = haal.soort;           // de stift bepaalt hoe de rechte lijn eruitziet
+        tekenRechteLijn(haal, haal.vx, haal.vy);
+        haal.soort = 'lijn';
+      }else{
+        // herkende vorm: de haal wordt de bijpassende vorm-voorvertoning,
+        // met begin- en sleep-hoek op de omsluitende rechthoek van je pad
+        haal.sx = vorm.x0; haal.sy = vorm.y0;
+        haal.vx = vorm.x1; haal.vy = vorm.y1;
+        if(vorm.soort === 'rechthoek'){
+          if(doc.gevuld) rechthoekGevuld(haal.sx, haal.sy, haal.vx, haal.vy, haal.kleur);
+          else rechthoek(haal.sx, haal.sy, haal.vx, haal.vy, haal.maat, haal.kleur, haal.kwast);
+        }else{
+          if(doc.gevuld) ellipsGevuld(haal.sx, haal.sy, haal.vx, haal.vy, haal.kleur);
+          else cirkel(haal.sx, haal.sy, haal.vx, haal.vy, haal.maat, haal.kleur, haal.kwast);
+        }
+        haal.soort = vorm.soort;
+      }
       haal.prevBbox = moveBbox; moveBbox = null;
-      haal.soort = 'lijn';
       clearInterval(snapTimer);
       vraagTeken();
     }, 120);
@@ -1823,6 +1892,10 @@ weergave.addEventListener('pointermove', e=>{
   for(const ev of stappen){
     const [x,y] = schermNaarRaster(ev);
     const s = haal.soort;
+    if(haal.pad && haal.pad.length < 6000){
+      const lp = haal.pad[haal.pad.length-1];
+      if(x!==lp[0] || y!==lp[1]) haal.pad.push([x,y]);
+    }
     if(s==='spuit'){
       spuitPuf(x, y, haal.maat, haal.kleur);
     }else if(s==='glitter'){
