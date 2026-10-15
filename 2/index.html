@@ -221,6 +221,10 @@ table.garens .sw{ width:26px; height:26px; border-radius:6px; border:1px solid #
 .help .versie{ color:var(--tekst2); margin-top:12px; }
 
 
+.voortgang{ height:8px; background:#444; border-radius:4px; overflow:hidden; margin:10px 0 6px; }
+.voortgang i{ display:block; height:100%; width:0; background:var(--accent); transition:width .15s; }
+
+
 #toast{ position:absolute; left:50%; bottom:calc(var(--onderh) + env(safe-area-inset-bottom) + 14px); transform:translate(-50%, 20px); background:#111e; color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:opacity .2s, transform .2s; pointer-events:none; z-index:60; max-width:90vw; text-align:center; }
 #toast.zichtbaar{ opacity:1; transform:translate(-50%, 0); }
 #pipetFlits{ position:absolute; left:0; right:0; top:0; height:6px; z-index:60; opacity:0; transition:opacity .15s; pointer-events:none; }
@@ -493,12 +497,8 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         </div>
       </div>
       <div class="tab" data-tab="delen">
-        <button class="knop breed" id="kPngPlat"><svg class="ic"><use href="#i-deel"/></svg> PNG plat — voor het TextielLab (1 px = 1 rasterpunt)</button>
-        <button class="knop breed" id="kPngGroot"><svg class="ic"><use href="#i-deel"/></svg> PNG groot — scherpe blokken om te delen</button>
-        <button class="knop breed" id="kPngLagen"><svg class="ic"><use href="#i-deel"/></svg> PNG per laag (doorzichtig)</button>
-        <button class="knop breed" id="kProject"><svg class="ic"><use href="#i-deel"/></svg> Projectbestand (.weefstudio.json)</button>
-        <button class="knop breed" id="kReserve"><svg class="ic"><use href="#i-deel"/></svg> Reservekopie van álle kleden</button>
-        <div class="uitleg">Op de iPad opent het deelmenu (Foto's, Bestanden, AirDrop…); op de computer wordt het een download. De reservekopie zet je terug via Toevoegen › Projectbestand openen; bewaar er af en toe een in Bestanden of iCloud.</div>
+        <button class="knop breed primair" id="kExport"><svg class="ic"><use href="#i-deel"/></svg> Exporteren…</button>
+        <div class="uitleg">Eén venster voor alles: hele kleed, selectie of per laag, als PNG, projectbestand of reservekopie van alle kleden. De app maakt eerst het bestand (met voortgang) en daarna deel je het met één tik: op de iPad via het deelmenu (Bestanden, Foto's, AirDrop…), op de computer als download. Een reservekopie zet je terug via Toevoegen › Projectbestand openen.</div>
       </div>
       <div class="tab" data-tab="instellingen">
         <div class="rij"><span class="rijlabel">zijbalk</span><div class="seg klein" id="zijbalkKant"><button data-kant="links">links</button><button data-kant="rechts">rechts</button></div></div>
@@ -513,6 +513,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Eén vinger tekent (of schuift na Pencil-gebruik). Twee vingers: knijpen = zoomen en schuiven. Twee vingers tikken = ongedaan, drie = opnieuw. Vier vingers tikken verbergt de balken, als dat aanstaat bij Instellingen.</p>
           <p>Verloopstift en verloopvul gebruiken het actieve verloop (onder Stiften of Vullen): elk verloop heeft zijn eigen garens en er zijn zes stijlen. Zonder gekozen garens lopen ze vanaf het actieve garen door het palet.</p>
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
+          <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
           <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om garenmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
@@ -555,7 +556,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.4';
+const APP_VERSIE = '2.5';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -3799,11 +3800,7 @@ el('schRefZicht').addEventListener('change', ()=>{ if(doc.ref){ doc.ref.zicht = 
 el('refDek').addEventListener('input', ()=>{ if(doc.ref){ doc.ref.dek = +el('refDek').value/100; vraagTeken(); } });
 el('refDek').addEventListener('change', markeerGewijzigd);
 el('kRefWeg').addEventListener('click', ()=>{ if(!doc.ref) return; const voor = doc.ref; doc.ref = null; undoPush({type:'ref', voor, na:null, bytes:64}); laadRef(); actiesBij(); });
-el('kPngPlat').addEventListener('click', ()=>{ paneelSluit(); exportPngPlat(); });
-el('kPngGroot').addEventListener('click', ()=>{ paneelSluit(); exportPngGroot(); });
-el('kPngLagen').addEventListener('click', ()=>{ paneelSluit(); exportPngLagen(); });
-el('kProject').addEventListener('click', ()=>{ paneelSluit(); exportProject(); });
-el('kReserve').addEventListener('click', ()=>{ paneelSluit(); exportAlles(); });
+el('kExport').addEventListener('click', ()=>{ paneelSluit(); exportDialoog(); });
 el('zijbalkKant').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.zijbalkLinks = b.dataset.kant==='links'; bewaarInst(); actiesBij(); knoppenBij(); });
 el('vingerKeuze').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.vingerTekent = b.dataset.v; bewaarInst(); actiesBij(); });
 schakel('schGarenbalk', 'garenbalk', knoppenBij);
@@ -4168,6 +4165,7 @@ function maakThumb(d){
 }
 
 let bewaarTimer = null, bewaarBezig = false, bewaarBelofte = null, bewaarAfgebroken = 0;
+let opslagUit = false;           // zelftest: niets wegschrijven
 function markeerGewijzigd(){
   if(!doc) return;
   doc.gewijzigd = Date.now();
@@ -4178,7 +4176,7 @@ function bewaarStraks(){
   bewaarTimer = setTimeout(()=>bewaarNu(), 2500);
 }
 async function bewaarNu(forceer){
-  if(!doc) return;
+  if(!doc || opslagUit) return;
   clearTimeout(bewaarTimer);
   if(zwevend){
     if(!forceer){ bewaarStraks(); return; }
@@ -4259,7 +4257,7 @@ function kaartMenu(it){
     ['Openen', ()=>openDocId(it.id)],
     ['Hernoem…', async ()=>{ const n = await vraagTekst('Naam van het kleed', it.naam); if(n) await docHernoem(it.id, n); galerijToon(); }],
     ['Dupliceer', async ()=>{ await docDupliceer(it.id); galerijToon(); }],
-    ['Exporteer projectbestand', async ()=>{ const r = await dbDoe('docs','readonly', s=>s.get(it.id)); if(r) deelOfDownload(new File([projectJson(recordNaarDoc(r))], veiligeNaam(it.naam)+'.weefstudio.json', {type:'application/json'})); }],
+    ['Exporteer projectbestand', async ()=>{ const r = await dbDoe('docs','readonly', s=>s.get(it.id)); if(r) exportKlaarDialoog(new Blob([projectJson(recordNaarDoc(r))], {type:'application/json'}), veiligeNaam(it.naam)+'.weefstudio.json', 'Projectbestand van "'+it.naam+'" staat klaar.'); }],
     ['Verwijder', async ()=>{ if(await bevestig('"'+it.naam+'" definitief verwijderen?', 'Verwijder')){ await docVerwijder(it.id); galerijToon(); } }, true],
   ];
   for(const [tekst, fn, gevaar] of items){
@@ -4364,64 +4362,6 @@ function deelOfDownload(bestanden){
     }, i*500);
   });
 }
-function canvasNaarBestand(c, naam){
-  const bin = atob(c.toDataURL('image/png').split(',')[1]);
-  const arr = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
-  return new File([arr], naam, {type:'image/png'});
-}
-function platCanvas(){
-  verzekerComposiet();
-  const c = document.createElement('canvas');
-  c.width = doc.w; c.height = doc.h;
-  c.getContext('2d').drawImage(samen, 0, 0);
-  return c;
-}
-function exportPngPlat(){
-  deelOfDownload(canvasNaarBestand(platCanvas(), veiligeNaam(doc.naam)+'_'+doc.w+'x'+doc.h+'.png'));
-}
-function exportPngGroot(){
-  const plat = platCanvas();
-  const f = Math.min(8, Math.max(1, Math.floor(4000 / Math.max(doc.w, doc.h))));
-  const c = document.createElement('canvas');
-  c.width = doc.w*f; c.height = doc.h*f;
-  const g = c.getContext('2d');
-  g.imageSmoothingEnabled = false;
-  g.drawImage(plat, 0, 0, c.width, c.height);
-  deelOfDownload(canvasNaarBestand(c, veiligeNaam(doc.naam)+'_groot_'+c.width+'x'+c.height+'.png'));
-}
-function exportPngLagen(){
-  const naam = veiligeNaam(doc.naam), P = paletPlat();
-  const c = document.createElement('canvas');
-  c.width = doc.w; c.height = doc.h;
-  const g = c.getContext('2d');
-  const img = g.createImageData(doc.w, doc.h);
-  const bestanden = doc.lagen.map((L, li)=>{
-    img.data.fill(0);
-    for(let i=0;i<L.data.length;i++){
-      const v = L.data[i];
-      if(v===LEEG) continue;
-      const j=i<<2, p=v*3;
-      img.data[j]=P[p]; img.data[j+1]=P[p+1]; img.data[j+2]=P[p+2]; img.data[j+3]=255;
-    }
-    g.putImageData(img,0,0);
-    return canvasNaarBestand(c, naam+'_laag'+(li+1)+'_'+veiligeNaam(L.naam)+'.png');
-  });
-  c.width = 1; c.height = 1;
-  deelOfDownload(bestanden);
-}
-async function exportAlles(){
-  if(doc) await bewaarNu(true);
-  const lijst = await galerijLijst();
-  const kleden = [];
-  for(const it of lijst){
-    try{ const r = await dbDoe('docs','readonly', s=>s.get(it.id)); if(r) kleden.push(Object.assign(JSON.parse(projectJson(recordNaarDoc(r))), {id:r.id, gemaakt:r.gemaakt, gewijzigd:r.gewijzigd})); }catch(e){}
-  }
-  if(!kleden.length){ toast('Geen kleden om te bewaren'); return; }
-  const datum = new Date().toISOString().slice(0,10);
-  deelOfDownload(new File([JSON.stringify({app:'weefstudio-reservekopie', versie:2, datum, kleden})], 'weefstudio-reservekopie-'+datum+'.json', {type:'application/json'}));
-  toast(kleden.length+' kleden in de reservekopie');
-}
 async function importAlles(o){
   const bestaand = new Set((await galerijLijst()).map(i=>i.id));
   let n = 0, over = 0;
@@ -4449,10 +4389,6 @@ function projectJson(d){
     vullingen: (d.vullingen||[]).map(v=>({laagIndex:d.lagen.findIndex(l=>l.id===v.laag), kleuren:v.kleuren, x0:v.x0, y0:v.y0, x1:v.x1, y1:v.y1, rle:b64(v.rle)})).filter(v=>v.laagIndex>=0),
   });
 }
-function exportProject(){
-  deelOfDownload(new File([projectJson(doc)], veiligeNaam(doc.naam)+'.weefstudio.json', {type:'application/json'}));
-}
-
 let bestandModus = null;
 function bestandKies(modus){
   bestandModus = modus;
@@ -4603,6 +4539,314 @@ async function importProjectBestand(f){
   }catch(e){ toast('Dit projectbestand kan niet gelezen worden', true); }
 }
 
+const CRC_TABEL = (()=>{
+  const t = new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n] = c>>>0; }
+  return t;
+})();
+function crc32Deel(bytes, crc){ for(let i=0;i<bytes.length;i++) crc = CRC_TABEL[(crc ^ bytes[i]) & 255] ^ (crc >>> 8); return crc; }
+function crc32(bytes){ return (crc32Deel(bytes, 0xFFFFFFFF) ^ 0xFFFFFFFF) >>> 0; }
+
+class Bytes{
+  constructor(){ this.delen = []; this.lengte = 0; }
+  bytes(a){ this.delen.push(a); this.lengte += a.length; return this; }
+  u8(v){ return this.bytes(Uint8Array.of(v&255)); }
+  u16le(v){ return this.bytes(Uint8Array.of(v&255, (v>>>8)&255)); }
+  u32le(v){ return this.bytes(Uint8Array.of(v&255, (v>>>8)&255, (v>>>16)&255, (v>>>24)&255)); }
+  u32be(v){ return this.bytes(Uint8Array.of((v>>>24)&255, (v>>>16)&255, (v>>>8)&255, v&255)); }
+  tekst(s){ return this.bytes(new TextEncoder().encode(s)); }
+  af(){ const uit = new Uint8Array(this.lengte); let o=0; for(const d of this.delen){ uit.set(d, o); o += d.length; } return uit; }
+}
+async function blobNaarBytes(b){ return new Uint8Array(await b.arrayBuffer()); }
+async function comprimeer(bytes, formaat){
+  const cs = new CompressionStream(formaat);
+  const w = cs.writable.getWriter();
+  w.write(bytes); w.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+async function decomprimeer(bytes, formaat){
+  const ds = new DecompressionStream(formaat);
+  const w = ds.writable.getWriter();
+  w.write(bytes); w.close();
+  return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+}
+function dosDatumTijd(d){
+  return { tijd: (d.getHours()<<11) | (d.getMinutes()<<5) | (d.getSeconds()>>1),
+           datum: ((d.getFullYear()-1980)<<9) | ((d.getMonth()+1)<<5) | d.getDate() };
+}
+
+async function maakZip(bestanden, voortgang){
+  const enc = new TextEncoder(), {tijd, datum} = dosDatumTijd(new Date());
+  const delen = [], centraal = [];
+  let offset = 0;
+  for(let i=0;i<bestanden.length;i++){
+    const b = bestanden[i];
+    const data = (b.data instanceof Blob) ? await blobNaarBytes(b.data) : b.data;
+    const crc = crc32(data);
+    let methode = 0, inhoud = data;
+    if(b.comprimeer && window.CompressionStream){
+      const c = await comprimeer(data, 'deflate-raw');
+      if(c.length < data.length){ inhoud = c; methode = 8; }
+    }
+    const naam = enc.encode(b.naam);
+    const kop = new Bytes().u32le(0x04034b50).u16le(20).u16le(0x0800).u16le(methode).u16le(tijd).u16le(datum)
+      .u32le(crc).u32le(inhoud.length).u32le(data.length).u16le(naam.length).u16le(0).bytes(naam).af();
+    delen.push(kop, inhoud);
+    centraal.push(new Bytes().u32le(0x02014b50).u16le(20).u16le(20).u16le(0x0800).u16le(methode).u16le(tijd).u16le(datum)
+      .u32le(crc).u32le(inhoud.length).u32le(data.length).u16le(naam.length).u16le(0).u16le(0).u16le(0).u16le(0).u32le(0).u32le(offset).bytes(naam).af());
+    offset += kop.length + inhoud.length;
+    if(voortgang) await voortgang((i+1)/bestanden.length);
+  }
+  const cdStart = offset;
+  let cdLengte = 0;
+  for(const c of centraal){ delen.push(c); cdLengte += c.length; }
+  delen.push(new Bytes().u32le(0x06054b50).u16le(0).u16le(0).u16le(bestanden.length).u16le(bestanden.length).u32le(cdLengte).u32le(cdStart).u16le(0).af());
+  return new Blob(delen, {type:'application/zip'});
+}
+async function leesZip(bytes){
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let e = bytes.length - 22;
+  while(e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if(e < 0) throw new Error('geen ZIP-einde gevonden');
+  const n = dv.getUint16(e+10, true), cdStart = dv.getUint32(e+16, true);
+  const dec = new TextDecoder(), uit = [];
+  let p = cdStart;
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(p, true) !== 0x02014b50) throw new Error('central directory kapot');
+    const methode = dv.getUint16(p+10, true), crc = dv.getUint32(p+16, true), cLen = dv.getUint32(p+20, true), uLen = dv.getUint32(p+24, true);
+    const nLen = dv.getUint16(p+28, true), xLen = dv.getUint16(p+30, true), kLen = dv.getUint16(p+32, true), offset = dv.getUint32(p+42, true);
+    const naam = dec.decode(bytes.subarray(p+46, p+46+nLen));
+    if(dv.getUint32(offset, true) !== 0x04034b50) throw new Error('local header kapot bij '+naam);
+    const lnLen = dv.getUint16(offset+26, true), lxLen = dv.getUint16(offset+28, true);
+    const begin = offset + 30 + lnLen + lxLen;
+    let inhoud = bytes.subarray(begin, begin+cLen);
+    if(methode===8) inhoud = await decomprimeer(inhoud, 'deflate-raw');
+    else if(methode!==0) throw new Error('onbekende methode '+methode);
+    uit.push({naam, methode, crc, grootte:uLen, inhoud, offset});
+    p += 46 + nLen + xLen + kLen;
+  }
+  return uit;
+}
+
+function canvasNaarBlob(c){ return new Promise((res, rej)=>c.toBlob(b=> b ? res(b) : rej(new Error('canvas gaf geen PNG')), 'image/png')); }
+function exportRect(wat){
+  if(wat==='selectie' && selBbox) return {x0:selBbox.x0, y0:selBbox.y0, w:selBbox.x1-selBbox.x0+1, h:selBbox.y1-selBbox.y0+1};
+  return {x0:0, y0:0, w:doc.w, h:doc.h};
+}
+async function pngRgbVanComposiet(r, blok){
+  verzekerComposiet();
+  const c = document.createElement('canvas');
+  c.width = r.w*blok; c.height = r.h*blok;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(samen, r.x0, r.y0, r.w, r.h, 0, 0, c.width, c.height);
+  const blob = await canvasNaarBlob(c);
+  c.width = 1; c.height = 1;
+  return blob;
+}
+async function pngRgbVanLaag(L, r, blok, canvas){
+  const P = paletPlat();
+  canvas.width = r.w; canvas.height = r.h;
+  const g = canvas.getContext('2d');
+  const img = g.createImageData(r.w, r.h), D = img.data, w = doc.w;
+  for(let y=0;y<r.h;y++){
+    const rij = (r.y0+y)*w + r.x0;
+    for(let x=0;x<r.w;x++){
+      const v = L.data[rij+x];
+      if(v===LEEG) continue;
+      const j = (y*r.w+x)*4, p = v*3;
+      D[j]=P[p]; D[j+1]=P[p+1]; D[j+2]=P[p+2]; D[j+3]=255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  if(blok===1) return canvasNaarBlob(canvas);
+  const c2 = document.createElement('canvas');
+  c2.width = r.w*blok; c2.height = r.h*blok;
+  const g2 = c2.getContext('2d');
+  g2.imageSmoothingEnabled = false;
+  g2.drawImage(canvas, 0, 0, c2.width, c2.height);
+  const blob = await canvasNaarBlob(c2);
+  c2.width = 1; c2.height = 1;
+  return blob;
+}
+function tweeCijfers(n){ return String(n).padStart(2, '0'); }
+function maatTekstBestand(b){ return b >= 1048576 ? nlGetal(b/1048576, 1)+' MB' : nlGetal(b/1024, 0)+' kB'; }
+
+const EXPORT_FORMATEN = [
+  {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
+  {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en garens; later weer te openen',           wat:['kleed'], maat:false},
+  {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
+];
+const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag']];
+const exportKeuze = {wat:'kleed', formaat:'pngrgb', blok:1, naam:''};
+let exportTaak = null;      // {geannuleerd, blob, naam}
+
+async function exportMaak(o, voortgang, geannuleerd){
+  const naam = veiligeNaam(o.naam || doc.naam);
+  if(o.formaat==='project'){
+    await voortgang(0.5);
+    return {blob:new Blob([projectJson(doc)], {type:'application/json'}), naam:naam+'.weefstudio.json'};
+  }
+  if(o.formaat==='reserve') return maakReservekopie(voortgang, geannuleerd);
+  const r = exportRect(o.wat), blok = o.maat ? o.blok : 1;
+  if(r.w*blok*r.h*blok > MAX_PX) throw new Error('Te groot: '+(r.w*blok)+' × '+(r.h*blok)+' pixels. Kies kleinere blokken (maximaal 16 miljoen pixels).');
+  if(o.formaat==='pngrgb'){
+    if(o.wat==='lagen'){
+      const canvas = document.createElement('canvas'), bestanden = [];
+      for(let i=0;i<doc.lagen.length;i++){
+        const L = doc.lagen[i];
+        bestanden.push({naam:naam+'_laag'+tweeCijfers(i+1)+'_'+veiligeNaam(L.naam)+'.png', data: await pngRgbVanLaag(L, r, blok, canvas)});
+        await voortgang((i+1)/(doc.lagen.length+1));
+        if(geannuleerd()) return null;
+      }
+      canvas.width = 1; canvas.height = 1;
+      return {blob: await maakZip(bestanden), naam:naam+'_lagen.zip'};
+    }
+    await voortgang(0.3);
+    const blob = await pngRgbVanComposiet(r, blok);
+    return {blob, naam:naam+(o.wat==='selectie' ? '_sel' : '')+'_'+(r.w*blok)+'x'+(r.h*blok)+'.png'};
+  }
+  throw new Error('Onbekend formaat');
+}
+async function maakReservekopie(voortgang, geannuleerd){
+  if(doc) await bewaarNu(true);
+  const lijst = await galerijLijst(), kleden = [];
+  for(let i=0;i<lijst.length;i++){
+    const it = lijst[i];
+    try{
+      const r = await dbDoe('docs','readonly', s=>s.get(it.id));
+      if(r) kleden.push(Object.assign(JSON.parse(projectJson(recordNaarDoc(r))), {id:r.id, gemaakt:r.gemaakt, gewijzigd:r.gewijzigd}));
+    }catch(e){}
+    if(voortgang) await voortgang((i+1)/Math.max(1, lijst.length));
+    if(geannuleerd && geannuleerd()) return null;
+  }
+  if(!kleden.length) throw new Error('Geen kleden om te bewaren');
+  const datum = new Date().toISOString().slice(0,10);
+  return {blob:new Blob([JSON.stringify({app:'weefstudio-reservekopie', versie:2, datum, kleden})], {type:'application/json'}), naam:'weefstudio-reservekopie-'+datum+'.json', aantal:kleden.length};
+}
+function mimeVoor(naam){
+  if(/\.png$/i.test(naam)) return 'image/png';
+  if(/\.zip$/i.test(naam)) return 'application/zip';
+  if(/\.json$/i.test(naam)) return 'application/json';
+  return 'application/octet-stream';
+}
+
+function exportDialoog(){
+  if(!doc) return;
+  rondAf();
+  if(!exportKeuze.naam) exportKeuze.naam = veiligeNaam(doc.naam);
+  if(exportKeuze.wat==='selectie' && !selBbox) exportKeuze.wat = 'kleed';
+  const vak = maak('div');
+  const watRij = maak('div', 'rij'), watSeg = maak('div', 'seg klein');
+  watRij.append(maak('span', 'rijlabel', 'wat'), watSeg);
+  const formSeg = maak('div', 'seg kolom');
+  const maatRij = maak('div', 'rij'), maatSeg = maak('div', 'seg klein');
+  const blokIn = maak('input'); blokIn.type = 'number'; blokIn.min = 2; blokIn.max = 16; blokIn.value = Math.max(2, exportKeuze.blok);
+  maatRij.append(maak('span', 'rijlabel', 'maat'), maatSeg, blokIn);
+  const naamRij = maak('div', 'rij'); const naamIn = maak('input'); naamIn.type = 'text'; naamIn.value = exportKeuze.naam; naamIn.style.flex = '1';
+  naamRij.append(maak('span', 'rijlabel', 'naam'), naamIn);
+  const info = maak('div', 'uitleg');
+  const voortgang = maak('div', 'voortgang'); voortgang.hidden = true; const balk = maak('i'); voortgang.appendChild(balk);
+  const status = maak('div', 'uitleg'); status.hidden = true;
+  const knoppen = maak('div', 'dialoogknoppen');
+  vak.append(watRij, maak('div','sectiekop','formaat'), formSeg, maatRij, naamRij, info, voortgang, status, knoppen);
+
+  const formaat = ()=>EXPORT_FORMATEN.find(f=>f.id===exportKeuze.formaat) || EXPORT_FORMATEN[0];
+  const bouw = ()=>{
+    const f = formaat();
+    if(!f.wat.includes(exportKeuze.wat)) exportKeuze.wat = f.wat[0];
+    watSeg.innerHTML = '';
+    EXPORT_WAT.forEach(([id, tekst])=>{
+      const b = maak('button', id===exportKeuze.wat ? 'actief' : '', tekst);
+      b.disabled = !f.wat.includes(id) || (id==='selectie' && !selBbox);
+      b.addEventListener('click', ()=>{ exportKeuze.wat = id; bouw(); });
+      watSeg.appendChild(b);
+    });
+    formSeg.innerHTML = '';
+    EXPORT_FORMATEN.forEach(ff=>{
+      const b = maak('button', ff.id===exportKeuze.formaat ? 'actief' : '');
+      b.appendChild(maak('b', '', ff.naam)); b.appendChild(maak('small', '', ff.uitleg));
+      b.addEventListener('click', ()=>{ exportKeuze.formaat = ff.id; bouw(); });
+      formSeg.appendChild(b);
+    });
+    maatRij.style.display = f.maat ? '' : 'none';
+    maatSeg.innerHTML = '';
+    [['1','1 px = 1 rasterpunt'],['blok','blokken van']].forEach(([id, tekst])=>{
+      const b = maak('button', ((id==='blok')===(exportKeuze.blok>1)) ? 'actief' : '', tekst);
+      b.addEventListener('click', ()=>{ exportKeuze.blok = id==='blok' ? Math.max(2, +blokIn.value||2) : 1; bouw(); });
+      maatSeg.appendChild(b);
+    });
+    blokIn.style.display = exportKeuze.blok>1 ? '' : 'none';
+    const r = exportRect(exportKeuze.wat), blok = f.maat ? exportKeuze.blok : 1;
+    let tekst = '';
+    if(f.id==='project') tekst = 'Het hele kleed met lagen, garens en verlopen, als .weefstudio.json.';
+    else if(f.id==='reserve') tekst = 'Alle kleden uit de galerij in één bestand. Bewaar het af en toe in Bestanden of iCloud.';
+    else {
+      const uitW = r.w*blok, uitH = r.h*blok;
+      tekst = (exportKeuze.wat==='lagen' ? doc.lagen.length+' bestanden in een zip, elk ' : '') + uitW+' × '+uitH+' pixels ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm)';
+      if(uitW*uitH > MAX_PX) tekst += ' — te groot, kies kleinere blokken';
+    }
+    info.textContent = tekst;
+  };
+  blokIn.addEventListener('change', ()=>{ exportKeuze.blok = klem(+blokIn.value||2, 2, 16); blokIn.value = exportKeuze.blok; bouw(); });
+  naamIn.addEventListener('input', ()=>{ exportKeuze.naam = naamIn.value; });
+
+  const zetKnoppen = (fase)=>{
+    knoppen.innerHTML = '';
+    if(fase==='kies'){
+      const a = maak('button', 'knop', 'Annuleer'); a.addEventListener('click', dialoogSluit);
+      const m = maak('button', 'knop primair', 'Maak bestand'); m.addEventListener('click', start);
+      knoppen.append(a, m);
+    }else if(fase==='bezig'){
+      const a = maak('button', 'knop', 'Annuleer'); a.addEventListener('click', ()=>{ if(exportTaak) exportTaak.geannuleerd = true; dialoogSluit(); });
+      knoppen.append(a);
+    }else{
+      const s = maak('button', 'knop', 'Sluiten'); s.addEventListener('click', dialoogSluit);
+      const d = maak('button', 'knop primair', 'Delen');
+      d.appendChild(icoon('deel'));
+      d.addEventListener('click', ()=>{ const t = exportTaak; if(t && t.blob) deelOfDownload(new File([t.blob], t.naam, {type:mimeVoor(t.naam)})); });
+      knoppen.append(s, d);
+    }
+  };
+  const zetInvoer = (aan)=>{ vak.querySelectorAll('button, input').forEach(e=>{ if(!knoppen.contains(e)) e.disabled = !aan; }); };
+  async function start(){
+    const taak = exportTaak = {geannuleerd:false, blob:null, naam:''};
+    zetInvoer(false); zetKnoppen('bezig');
+    voortgang.hidden = false; balk.style.width = '2%'; status.hidden = false; status.textContent = 'Bezig…';
+    const vg = async f=>{ balk.style.width = Math.round(f*100)+'%'; status.textContent = 'Bezig… '+Math.round(f*100)+'%'; await adem(); };
+    try{
+      const uit = await exportMaak(Object.assign({maat:formaat().maat}, exportKeuze), vg, ()=>taak.geannuleerd);
+      if(taak.geannuleerd || exportTaak!==taak) return;
+      if(!uit){ dialoogSluit(); return; }
+      taak.blob = uit.blob; taak.naam = uit.naam;
+      balk.style.width = '100%';
+      status.innerHTML = '';
+      status.appendChild(maak('b', '', uit.naam));
+      status.appendChild(document.createTextNode(' · '+maatTekstBestand(uit.blob.size)+(uit.aantal ? ' · '+uit.aantal+' kleden' : '')));
+      if(navigator.canShare) status.appendChild(maak('div', '', 'Tik op Delen en kies "Bewaar in Bestanden" om het als bestand te houden; "Bewaar afbeelding" zet een PNG in Foto’s.'));
+      zetKnoppen('klaar');
+    }catch(e){
+      status.textContent = 'Mislukt: '+(e && e.message ? e.message : e);
+      voortgang.hidden = true;
+      zetInvoer(true); zetKnoppen('kies');
+      bouw();
+    }
+  }
+  bouw(); zetKnoppen('kies');
+  dialoogOpen('Exporteren', vak, [], ()=>{ if(exportTaak){ exportTaak.geannuleerd = true; exportTaak = null; } });
+}
+function exportKlaarDialoog(blob, naam, uitleg){
+  exportTaak = {geannuleerd:false, blob, naam};
+  const vak = maak('div');
+  vak.appendChild(maak('p', '', uitleg || 'Het bestand staat klaar.'));
+  const st = maak('div', 'uitleg'); st.appendChild(maak('b', '', naam)); st.appendChild(document.createTextNode(' · '+maatTekstBestand(blob.size)));
+  vak.appendChild(st);
+  dialoogOpen('Exporteren', vak, [
+    {tekst:'Sluiten'},
+    {tekst:'Delen', primair:true, actie:()=>{ const t = exportTaak; if(t && t.blob) deelOfDownload(new File([t.blob], t.naam, {type:mimeVoor(t.naam)})); return false; }},
+  ], ()=>{ exportTaak = null; });
+}
+
 function zetDoc(d){
   haalStop();
   zwevend = null; selMask = null; selBbox = null; selVoorvertoning = null; selOverlayWeg();
@@ -4662,7 +4906,114 @@ setTimeout(()=>{
     toast('Tip: zet de app op je beginscherm (Deel › Zet op beginscherm). Dan is hij schermvullend, werkt hij offline en bewaart Safari je werk blijvend.', true);
   }
 }, 4000);
-start();
+const startKlaar = start();
+
+async function zelftest(){
+  const uit = [];
+  const test = async (naam, fn)=>{
+    try{ const r = await fn(); uit.push({naam, ok: r!==false, info: typeof r==='string' ? r : ''}); }
+    catch(e){ uit.push({naam, ok:false, info:String(e && e.message || e)}); }
+  };
+  const vorige = doc;
+  opslagUit = true;
+  try{
+    const d = nieuwDoc(64, 48, 14, ['#f2ead8','#1a1a1a','#d23c2a','#d23c2a','#2a6dd2'], 'zelftest');
+    d.lagen.push(nieuweLaag('laag 2', 64, 48));
+    const A = d.lagen[0].data, B = d.lagen[1].data, C = d.lagen[2].data;
+    for(let y=0;y<48;y++) for(let x=0;x<64;x++){
+      if(((x+y)>>2)&1) A[y*64+x] = 1;                                                        // schuine banden
+      if(x>=10&&x<30&&y>=10&&y<30 && !(x>=16&&x<24&&y>=16&&y<24)) B[y*64+x] = 2;              // blok met gat
+      if(x>=40&&x<60&&y>=5&&y<40) C[y*64+x] = 3;                                               // blok, zelfde hex als garen 2
+    }
+    d.lagen[2].dek = 32; d.actief = 1;
+    zetDoc(d);
+    verzekerComposiet();
+    const niets = async ()=>{}, nooit = ()=>false;
+
+    await test('CRC32 referentiewaarde', ()=> crc32(new TextEncoder().encode('123456789'))===0xCBF43926);
+    await test('ZIP store: structuur, namen en CRC', async ()=>{
+      const a = new TextEncoder().encode('hallo weefstudio'), b = new Uint8Array(1000);
+      for(let i=0;i<1000;i++) b[i] = (i*31)&255;
+      const items = await leesZip(await blobNaarBytes(await maakZip([{naam:'a.txt', data:a},{naam:'map/b.bin', data:b}])));
+      if(items.length!==2) return 'aantal '+items.length;
+      if(items[0].naam!=='a.txt' || items[1].naam!=='map/b.bin') return 'namen '+items.map(i=>i.naam).join(',');
+      for(const it of items) if(it.crc!==crc32(it.inhoud)) return 'CRC klopt niet bij '+it.naam;
+      return items[1].inhoud.every((v,i)=>v===b[i]) && items[0].methode===0;
+    });
+    await test('ZIP deflate-raw: inhoud en CRC terug', async ()=>{
+      if(!window.CompressionStream) return 'overgeslagen (geen CompressionStream)';
+      const t = new TextEncoder().encode('abc '.repeat(2000));
+      const items = await leesZip(await blobNaarBytes(await maakZip([{naam:'t.txt', data:t, comprimeer:true}])));
+      return items[0].methode===8 && items[0].crc===crc32(t) && items[0].inhoud.length===t.length && items[0].inhoud.every((v,i)=>v===t[i]);
+    });
+    await test('PNG RGB hele kleed = composiet', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'pngrgb', blok:1, maat:true, naam:'zt'}, niets, nooit);
+      const bm = await createImageBitmap(r.blob);
+      if(bm.width!==64 || bm.height!==48) return 'maat '+bm.width+'x'+bm.height;
+      const c = document.createElement('canvas'); c.width = 64; c.height = 48;
+      const g = c.getContext('2d'); g.drawImage(bm, 0, 0);
+      const px = g.getImageData(0, 0, 64, 48).data, P = paletPlat();
+      for(let i=0;i<64*48;i++){ const k = samenIdx[i]*3; if(px[i*4]!==P[k] || px[i*4+1]!==P[k+1] || px[i*4+2]!==P[k+2]) return 'afwijking bij punt '+i; }
+      return r.naam==='zt_64x48.png';
+    });
+    await test('PNG blokken van 3', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'pngrgb', blok:3, maat:true, naam:'zt'}, niets, nooit);
+      const bm = await createImageBitmap(r.blob);
+      return bm.width===192 && bm.height===144 && r.naam==='zt_192x144.png';
+    });
+    await test('PNG selectie (omsluitende rechthoek)', async ()=>{
+      selZetRuw(rleCodeer(maskRechthoek(10, 10, 29, 29)));
+      const r = await exportMaak({wat:'selectie', formaat:'pngrgb', blok:1, maat:true, naam:'zt'}, niets, nooit);
+      selZetRuw(null);
+      const bm = await createImageBitmap(r.blob);
+      return bm.width===20 && bm.height===20 && r.naam==='zt_sel_20x20.png';
+    });
+    await test('PNG per laag: zip, namen, doorzichtig waar leeg', async ()=>{
+      const r = await exportMaak({wat:'lagen', formaat:'pngrgb', blok:1, maat:true, naam:'zt'}, niets, nooit);
+      const items = await leesZip(await blobNaarBytes(r.blob));
+      if(items.length!==3) return 'aantal '+items.length;
+      if(items[1].naam!=='zt_laag02_laag 1.png') return 'naam '+items[1].naam;
+      const bm = await createImageBitmap(new Blob([items[1].inhoud], {type:'image/png'}));
+      const c = document.createElement('canvas'); c.width = 64; c.height = 48;
+      const g = c.getContext('2d'); g.drawImage(bm, 0, 0);
+      const px = g.getImageData(0, 0, 64, 48).data;
+      const vol = (12*64+12)*4, gat = (20*64+20)*4;
+      return px[vol+3]===255 && px[gat+3]===0 && r.naam==='zt_lagen.zip';
+    });
+    await test('Projectbestand: lagen en palet terug', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'project', naam:'zt'}, niets, nooit);
+      const d2 = projectNaarDoc(JSON.parse(await r.blob.text()), 'x');
+      return d2.lagen.length===3 && d2.palet.join()===doc.palet.join() && d2.lagen.every((L,i)=>L.data.every((v,j)=>v===doc.lagen[i].data[j]));
+    });
+    await test('Reservekopie: één kleed per galerij-item', async ()=>{
+      const n = (await galerijLijst()).length;
+      if(!n) return 'overgeslagen (lege galerij)';
+      const r = await maakReservekopie(niets, nooit);
+      const o = JSON.parse(await r.blob.text());
+      return o.app==='weefstudio-reservekopie' && o.kleden.length===n && r.naam.startsWith('weefstudio-reservekopie-');
+    });
+  }finally{
+    opslagUit = false;
+    if(vorige) zetDoc(vorige);
+    else { doc = null; galerijToon(); }
+  }
+  const nOk = uit.filter(u=>u.ok).length;
+  window.zelftestUitslag = uit;
+  document.title = 'zelftest: '+nOk+'/'+uit.length+' ok';
+  const vak = maak('div'), tab = maak('table', 'garens');
+  uit.forEach(u=>{
+    const tr = maak('tr');
+    tr.append(maak('td', '', u.ok ? '✓' : '✗'), maak('td', '', u.naam), maak('td', '', u.info));
+    if(!u.ok) tr.style.color = 'var(--gevaar)';
+    tab.appendChild(tr);
+  });
+  vak.appendChild(maak('div', 'uitleg', nOk+' van '+uit.length+' controles goed · WeefStudio '+APP_VERSIE));
+  vak.appendChild(tab);
+  dialoogOpen('Zelftest', vak, [{tekst:'Sluiten', primair:true}]);
+  console.table(uit);
+  return uit;
+}
+if(/[?&]zelftest/.test(location.search)) startKlaar.then(()=>zelftest()).catch(e=>console.error('zelftest', e));
 
 </script>
 <script>
