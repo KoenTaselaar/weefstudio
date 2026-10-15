@@ -514,7 +514,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Verloopstift en verloopvul gebruiken het actieve verloop (onder Stiften of Vullen): elk verloop heeft zijn eigen garens en er zijn zes stijlen. Zonder gekozen garens lopen ze vanaf het actieve garen door het palet.</p>
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
           <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
-          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per garen" geeft per gebruikt garen een doorzichtige PNG (in garenkleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de garenlijst: per garen punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren.</p>
+          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per garen" geeft per gebruikt garen een doorzichtige PNG (in garenkleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de garenlijst: per garen punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren. SVG geeft per garen een vectorpad dat de rasterpunten exact volgt, met de maat in mm: voor vinyl- en lasersnijden, plotters en drukwerk op elke grootte.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
           <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om garenmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
@@ -557,7 +557,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.8';
+const APP_VERSIE = '2.9';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -4954,16 +4954,64 @@ function garensInGebruik(tel, metDoek){
   return lijst;
 }
 
+const RICHT_DX = [1, 0, -1, 0], RICHT_DY = [0, 1, 0, -1];          // 0 = rechts, 1 = omlaag, 2 = links, 3 = omhoog
+const LAAGSTE_BIT = [-1, 0, 1, 0, 2, 0, 1, 0, 3];                   // (b & -b) → richting
+function svgStap(d, n){ return d===0 ? ' h'+n : d===2 ? ' h-'+n : d===1 ? ' v'+n : ' v-'+n; }
+async function traceerMasker(m, w, h, randen, voortgang){
+  const W1 = w+1;
+  randen.fill(0);
+  for(let y=0;y<h;y++){
+    const rij = y*w;
+    for(let x=0;x<w;x++){
+      if(!m[rij+x]) continue;
+      if(y===0   || !m[rij-w+x]) randen[y*W1+x]         |= 1;    // bovenrand: naar rechts vanaf (x,y)
+      if(x===w-1 || !m[rij+x+1]) randen[y*W1+x+1]       |= 2;    // rechterrand: omlaag vanaf (x+1,y)
+      if(y===h-1 || !m[rij+w+x]) randen[(y+1)*W1+x+1]   |= 4;    // onderrand: naar links vanaf (x+1,y+1)
+      if(x===0   || !m[rij+x-1]) randen[(y+1)*W1+x]     |= 8;    // linkerrand: omhoog vanaf (x,y+1)
+    }
+    if(voortgang && (y&511)===511) await voortgang(0.5*y/h);
+  }
+  const delen = [];
+  let lussen = 0;
+  for(let v0=0; v0<randen.length; v0++){
+    if(!randen[v0]){ if(voortgang && (v0&0x3FFFF)===0) await voortgang(0.5+0.5*v0/randen.length); continue; }
+    const sx = v0 % W1, sy = (v0-sx)/W1;
+    let v = v0, d = LAAGSTE_BIT[randen[v0] & -randen[v0]], pad = 'M'+sx+' '+sy, loopD = d, loopN = 0, stappen = 0;
+    for(;;){
+      randen[v] &= ~(1<<d);
+      v += RICHT_DX[d] + RICHT_DY[d]*W1;
+      if(d===loopD) loopN++; else { pad += svgStap(loopD, loopN); loopD = d; loopN = 1; }
+      if(v===v0 || ++stappen > randen.length*2) break;
+      const b = randen[v];
+      if(!b) break;                                               // kan niet bij een gesloten masker; vangnet
+      const rechts = (d+1)&3;
+      d = (b & (1<<rechts)) ? rechts : LAAGSTE_BIT[b & -b];       // twee uitgangen → rechtsaf
+    }
+    delen.push(pad + svgStap(loopD, loopN) + 'z');
+    lussen++;
+  }
+  return {d: delen.join(' '), lussen};
+}
+function xmlTekst(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function mmTekst(v){ return String(Math.round(v*1000)/1000); }
+function svgKop(w, h, naam){
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="'+mmTekst(w/doc.pxcm*10)+'mm" height="'+mmTekst(h/doc.pxcm*10)+'mm" viewBox="0 0 '+w+' '+h+'" shape-rendering="crispEdges">\n'+
+         '<title>'+xmlTekst(naam)+'</title>\n<desc>WeefStudio '+APP_VERSIE+' · '+String(doc.pxcm).replace('.', ',')+' rasterpunten per cm · '+w+' × '+h+' punten</desc>\n';
+}
+function svgPad(i, hex, d){ return '<path id="garen-'+tweeCijfers(i)+'" fill="'+hex+'" fill-rule="evenodd" d="'+d+'"/>\n'; }
+const SVG_WAARSCHUW_PX = 4e6;
+
 const EXPORT_FORMATEN = [
   {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'garennummers en maat in cm zitten in het bestand; per laag of per garen doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
   {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
   {id:'bmp',     naam:'BMP 8 bits',                       uitleg:'geïndexeerd zonder compressie, voor weefsoftware die geen PNG leest', wat:['kleed','selectie'], maat:false},
+  {id:'svg',     naam:'SVG (vectoren per garen)',         uitleg:'voor snijden (vinyl, laser) en drukwerk; per garen een pad, exact langs de rasterpunten', wat:['kleed','selectie','garen'], maat:false},
   {id:'garenlijst', naam:'Garenlijst (CSV, JSON, GPL)',   uitleg:'per garen het aantal punten, procent en cm²; zit ook in elke zip',    wat:['kleed','selectie'], maat:false},
   {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en garens; later weer te openen',           wat:['kleed'], maat:false},
   {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
 ];
 const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag'],['garen','per garen']];
-const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, naam:'', garenZwart:false, metDoek:false};
+const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, naam:'', garenZwart:false, metDoek:false, svgDoek:true};
 let exportTaak = null;      // {geannuleerd, blob, naam}
 
 async function exportMaak(o, voortgang, geannuleerd){
@@ -4975,6 +5023,33 @@ async function exportMaak(o, voortgang, geannuleerd){
   if(o.formaat==='reserve') return maakReservekopie(voortgang, geannuleerd);
   const r = exportRect(o.wat), blok = o.maat ? o.blok : 1;
   if(r.w*blok*r.h*blok > MAX_PX) throw new Error('Te groot: '+(r.w*blok)+' × '+(r.h*blok)+' pixels. Kies kleinere blokken (maximaal 16 miljoen pixels).');
+  if(o.formaat==='svg'){
+    const tel = garenTelling(r), enc = new TextEncoder(), w = doc.w;
+    const randen = new Uint8Array((r.w+1)*(r.h+1)), m = new Uint8Array(r.w*r.h);
+    const maskVoor = (i)=>{ for(let y=0;y<r.h;y++){ const rij = (r.y0+y)*w + r.x0, uit = y*r.w; for(let x=0;x<r.w;x++) m[uit+x] = samenIdx[rij+x]===i ? 1 : 0; } return m; };
+    const lijst = garensInGebruik(tel, o.wat==='garen' ? o.metDoek : o.svgDoek!==false);
+    if(!lijst.length) throw new Error('Geen garens in gebruik');
+    if(o.wat==='garen'){
+      const bestanden = [];
+      for(let k=0;k<lijst.length;k++){
+        const i = lijst[k], hex = doc.palet[i];
+        const t = await traceerMasker(maskVoor(i), r.w, r.h, randen, async f=>voortgang((k+f)/lijst.length));
+        if(geannuleerd()) return null;
+        bestanden.push({naam:naam+'_garen'+tweeCijfers(i)+'_'+hex.slice(1)+'.svg', data:enc.encode(svgKop(r.w, r.h, naam+' garen '+tweeCijfers(i))+svgPad(i, o.garenZwart ? '#000000' : hex, t.d)+'</svg>\n'), comprimeer:true});
+      }
+      bestanden.push(...garenlijstBestanden(naam, r, tel));
+      return {blob: await maakZip(bestanden), naam:naam+'_per_garen_svg.zip'};
+    }
+    let svg = svgKop(r.w, r.h, naam);
+    for(let k=0;k<lijst.length;k++){
+      const i = lijst[k];
+      const t = await traceerMasker(maskVoor(i), r.w, r.h, randen, async f=>voortgang((k+f)/lijst.length));
+      if(geannuleerd()) return null;
+      svg += svgPad(i, doc.palet[i], t.d);
+    }
+    svg += '</svg>\n';
+    return {blob:new Blob([svg], {type:'image/svg+xml'}), naam:naam+(o.wat==='selectie' ? '_sel' : '')+'_'+r.w+'x'+r.h+'.svg'};
+  }
   if(o.formaat==='garenlijst'){
     const tel = garenTelling(r);
     await voortgang(0.5);
@@ -5062,6 +5137,7 @@ function mimeVoor(naam){
   if(/\.png$/i.test(naam)) return 'image/png';
   if(/\.bmp$/i.test(naam)) return 'image/bmp';
   if(/\.csv$/i.test(naam)) return 'text/csv';
+  if(/\.svg$/i.test(naam)) return 'image/svg+xml';
   if(/\.gpl$/i.test(naam)) return 'text/plain';
   if(/\.zip$/i.test(naam)) return 'application/zip';
   if(/\.json$/i.test(naam)) return 'application/json';
@@ -5118,8 +5194,16 @@ function exportDialoog(){
       maatSeg.appendChild(b);
     });
     blokIn.style.display = exportKeuze.blok>1 ? '' : 'none';
-    optieRij.style.display = exportKeuze.wat==='garen' ? '' : 'none';
+    const svgDoekKeuze = f.id==='svg' && exportKeuze.wat!=='garen';
+    optieRij.style.display = (exportKeuze.wat==='garen' || svgDoekKeuze) ? '' : 'none';
     optieSeg.innerHTML = ''; optieSeg2.innerHTML = '';
+    if(svgDoekKeuze){
+      [[true,'met doekgaren'],[false,'zonder doekgaren (open achtergrond)']].forEach(([v, tekst])=>{
+        const b = maak('button', v===exportKeuze.svgDoek ? 'actief' : '', tekst);
+        b.addEventListener('click', ()=>{ exportKeuze.svgDoek = v; bouw(); });
+        optieSeg.appendChild(b);
+      });
+    }
     if(exportKeuze.wat==='garen'){
       [[false,'garenkleur'],[true,'zwart']].forEach(([v, tekst])=>{
         const b = maak('button', v===exportKeuze.garenZwart ? 'actief' : '', tekst);
@@ -5143,6 +5227,10 @@ function exportDialoog(){
       if(exportKeuze.wat==='lagen') voor = doc.lagen.length+' bestanden + garenlijst in een zip, elk ';
       else if(exportKeuze.wat==='garen'){ if(!telKleed) telKleed = garenTelling(r); const n = garensInGebruik(telKleed, exportKeuze.metDoek).length; voor = n+' garen'+(n===1?'':'s')+' in gebruik → '+n+' bestanden + garenlijst in een zip, elk '; }
       tekst = voor + uitW+' × '+uitH+' pixels ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm)';
+      if(f.id==='svg'){
+        if(exportKeuze.wat!=='garen'){ if(!telKleed) telKleed = garenTelling(exportRect('kleed')); const n = garensInGebruik(exportKeuze.wat==='selectie' ? garenTelling(r) : telKleed, exportKeuze.svgDoek).length; tekst = n+' garen'+(n===1?'':'s')+' → '+n+' paden · '+r.w+' × '+r.h+' rasterpunten = '+nlGetal(r.w/doc.pxcm*10,1)+' × '+nlGetal(r.h/doc.pxcm*10,1)+' mm'; }
+        if(r.w*r.h > SVG_WAARSCHUW_PX) tekst += ' — let op: boven 4 miljoen rasterpunten kan het bestand tientallen MB worden; een selectie is handiger';
+      }
       if(uitW*uitH > MAX_PX) tekst += ' — te groot, kies kleinere blokken';
       if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' garens, '+nlGetal(doc.pxcm,0)+' per cm in het bestand';
       if(f.id==='bmp') tekst += ' · '+maatTekstBestand(bmpGrootte(r.w, r.h, doc.palet.length));
@@ -5468,6 +5556,44 @@ async function zelftest(){
       const gpl = dec.decode(items[2].inhoud).trim().split('\n');
       if(gpl[0]!=='GIMP Palette' || gpl.length!==9 || !/^\s*26\s+26\s+26\tgaren 01 #1a1a1a$/.test(gpl[5])) return 'gpl '+gpl[5];
       return items[0].methode===8 || items[0].methode===0;
+    });
+    await test('SVG-tracering: blok 10×10 = vier segmenten, gat = twee lussen, diagonaal = twee losse lussen', async ()=>{
+      const mk = (w, h, f)=>{ const m = new Uint8Array(w*h); for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(f(x,y)) m[y*w+x] = 1; return m; };
+      const randen = new Uint8Array(21*21);
+      const blok = await traceerMasker(mk(20, 20, (x,y)=>x>=5&&x<15&&y>=5&&y<15), 20, 20, randen);
+      if(blok.d!=='M5 5 h10 v10 h-10 v-10z' || blok.lussen!==1) return 'blok: '+blok.d;
+      const gat = await traceerMasker(mk(20, 20, (x,y)=>x>=5&&x<15&&y>=5&&y<15 && !(x>=8&&x<12&&y>=8&&y<12)), 20, 20, randen);
+      if(gat.lussen!==2 || (gat.d.match(/M/g)||[]).length!==2 || !/M8 8 v4 h4 v-4 h-4z/.test(gat.d)) return 'gat: '+gat.d;
+      const diag = await traceerMasker(mk(20, 20, (x,y)=>(x===5&&y===5)||(x===6&&y===6)), 20, 20, randen);
+      if(diag.lussen!==2 || diag.d!=='M5 5 h1 v1 h-1 v-1z M6 6 h1 v1 h-1 v-1z') return 'diagonaal: '+diag.d;
+      const dambord = await traceerMasker(mk(8, 8, (x,y)=>(x+y)&1), 8, 8, new Uint8Array(81));
+      if(dambord.lussen!==32) return 'dambord: '+dambord.lussen+' lussen';
+      const leeg = await traceerMasker(mk(8, 8, ()=>false), 8, 8, new Uint8Array(81));
+      return leeg.lussen===0 && leeg.d==='';
+    });
+    await test('SVG hele kleed: een pad per gebruikt garen, maten in mm, rendert gelijk aan het composiet', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'svg', naam:'zt', svgDoek:true}, niets, nooit);
+      const svg = await r.blob.text();
+      const paden = svg.match(/<path /g) || [];
+      if(paden.length!==4 || !/id="garen-00"/.test(svg) || !/id="garen-03" fill="#d23c2a"/.test(svg)) return 'paden '+paden.length;
+      if(!/width="45\.714mm" height="34\.286mm" viewBox="0 0 64 48"/.test(svg)) return 'maten: '+(svg.match(/<svg[^>]*>/)||[''])[0];
+      if(r.naam!=='zt_64x48.svg') return 'naam '+r.naam;
+      const img = new Image(), url = URL.createObjectURL(r.blob);
+      await new Promise((res, rej)=>{ img.onload = res; img.onerror = ()=>rej(new Error('browser weigert de SVG')); img.src = url; });
+      const c = document.createElement('canvas'); c.width = 64; c.height = 48;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0, 64, 48); URL.revokeObjectURL(url);
+      const px = g.getImageData(0, 0, 64, 48).data, P = paletPlat();
+      for(let i=0;i<64*48;i++){ const k = samenIdx[i]*3; if(px[i*4]!==P[k] || px[i*4+1]!==P[k+1] || px[i*4+2]!==P[k+2] || px[i*4+3]!==255) return 'afwijking bij punt '+i+' ('+px[i*4]+','+px[i*4+1]+','+px[i*4+2]+','+px[i*4+3]+')'; }
+      return true;
+    });
+    await test('SVG per garen: zip met één pad per bestand, plus garenlijst; zonder doek = 3', async ()=>{
+      const r = await exportMaak({wat:'garen', formaat:'svg', naam:'zt', garenZwart:false, metDoek:false}, niets, nooit);
+      const items = await leesZip(await blobNaarBytes(r.blob)), dec = new TextDecoder();
+      if(items.length!==6 || items[0].naam!=='zt_garen01_1a1a1a.svg' || items[3].naam!=='zt_garens.csv' || r.naam!=='zt_per_garen_svg.zip') return 'zip '+items.map(i=>i.naam).join(',');
+      const s = dec.decode(items[1].inhoud);
+      if((s.match(/<path /g)||[]).length!==1 || !/id="garen-02" fill="#d23c2a"/.test(s)) return 'inhoud garen 2';
+      const r2 = await exportMaak({wat:'kleed', formaat:'svg', naam:'zt', svgDoek:false}, niets, nooit);
+      return ((await r2.blob.text()).match(/<path /g)||[]).length===3;
     });
     await test('Import geïndexeerde PNG als laag: garens op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
