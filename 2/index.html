@@ -514,7 +514,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Verloopstift en verloopvul gebruiken het actieve verloop (onder Stiften of Vullen): elk verloop heeft zijn eigen garens en er zijn zes stijlen. Zonder gekozen garens lopen ze vanaf het actieve garen door het palet.</p>
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
           <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
-          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug.</p>
+          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
           <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om garenmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
@@ -557,7 +557,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.6';
+const APP_VERSIE = '2.7';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -4402,20 +4402,26 @@ el('bestandInvoer').addEventListener('change', ()=>{
   el('bestandInvoer').value = '';
   if(!f) return;
   if(f.type==='application/json' || /\.json$/i.test(f.name)){ importProjectBestand(f); return; }
-  importPngGeindexeerd(f).then(gedaan=>{ if(!gedaan) importAfbeeldingBestand(f); }).catch(()=>importAfbeeldingBestand(f));
+  importGeindexeerd(f).then(gedaan=>{ if(!gedaan) importAfbeeldingBestand(f); }).catch(()=>importAfbeeldingBestand(f));
 });
 
-async function importPngGeindexeerd(f){
+async function importGeindexeerd(f){
   const bytes = new Uint8Array(await f.arrayBuffer());
-  if(!isPng(bytes)) return false;
-  const info = leesPng(bytes);
-  if(info.kleurtype!==3 || info.interlace || !info.plte || !window.DecompressionStream) return false;
+  let info, idx = null;
+  if(isPng(bytes)){
+    info = leesPng(bytes);
+    if(info.kleurtype!==3 || info.interlace || !info.plte || !window.DecompressionStream) return false;
+  }else{
+    const b = leesBmp(bytes);
+    if(!b) return false;
+    info = b.info; idx = b.idx;
+  }
   if(!(info.w>=1 && info.h>=1) || info.w*info.h > MAX_PX || info.w>MAX_ZIJDE || info.h>MAX_ZIJDE) return false;
   let modus = bestandModus;
   if(!doc) modus = 'nieuw';
   if(modus==='import' || modus==='project') modus = doc ? 'laag' : 'nieuw';
   if(modus==='ref'){ zetRef(f); return true; }
-  const idx = await pngIndices(info);
+  if(!idx) idx = await pngIndices(info);
   if(modus==='laag') importIndexAlsLaag(info, idx);
   else await importIndexAlsNieuw(info, idx, f.name.replace(/\.[^.]+$/, ''));
   return true;
@@ -4445,7 +4451,8 @@ async function importIndexAlsNieuw(info, idx, naam){
   const plte = info.plte, door = pngDoorzichtig(info), w = info.w, h = info.h;
   const gebruikt = new Uint8Array(256);
   for(let i=0;i<idx.length;i++) gebruikt[idx[i]] = 1;
-  const houdAlles = !!(info.ws && info.ws.palet) && plte.length <= MAX_KLEUREN + 1;
+  let nEcht = 0; for(let i=0;i<plte.length && i<256;i++) if(!door[i]) nEcht++;
+  const houdAlles = nEcht <= MAX_KLEUREN;
   const map = new Int16Array(256).fill(-1), palet = [];
   for(let i=0;i<plte.length && i<256;i++){
     if(door[i]) continue;
@@ -4471,7 +4478,7 @@ async function importIndexAlsNieuw(info, idx, naam){
   d.actief = 1;
   zetDoc(d);
   bewaarNu();
-  toast('Geïndexeerde PNG geopend: '+palet.length+' garens, '+nlGetal(pxcm,0)+' per cm');
+  toast('Geïndexeerd bestand geopend: '+palet.length+' garens, '+nlGetal(pxcm,0)+' per cm');
 }
 function importIndexAlsLaag(info, idx){
   if(doc.lagen.length >= maxLagen()){ toast('Maximaal '+maxLagen()+' lagen bij dit formaat'); return; }
@@ -4497,7 +4504,7 @@ function importIndexAlsLaag(info, idx){
     selZet(m);
   });
   zetTool('transformeer');
-  toast('Geïndexeerde PNG staat op een nieuwe laag (garens op kleur gekoppeld) — verplaats hem, dan Klaar');
+  toast('Het bestand staat op een nieuwe laag (garens op kleur gekoppeld) — verplaats hem, dan Klaar');
 }
 function laadAfbeelding(f){
   return new Promise((res, rej)=>{
@@ -4873,9 +4880,50 @@ async function pngIndices(info){
   return uit;
 }
 
+function bmpGrootte(w, h, n){ return 54 + 4*n + ((w + 3) & ~3) * h; }
+async function maakBmp(o){   // o = {w, h, rij(y, uit), palet, pxcm, voortgang, geannuleerd}
+  const w = o.w, h = o.h, n = o.palet.length, rijBytes = (w + 3) & ~3;
+  const kop = 54 + 4*n, totaal = kop + rijBytes*h;
+  const uit = new Uint8Array(totaal), dv = new DataView(uit.buffer);
+  uit[0] = 0x42; uit[1] = 0x4D;                                   // 'BM'
+  dv.setUint32(2, totaal, true); dv.setUint32(10, kop, true);     // bestandsgrootte, begin van de beelddata
+  dv.setUint32(14, 40, true); dv.setInt32(18, w, true); dv.setInt32(22, h, true);   // positieve hoogte = van onder naar boven
+  dv.setUint16(26, 1, true); dv.setUint16(28, 8, true); dv.setUint32(30, 0, true);  // 1 vlak, 8 bits, BI_RGB
+  dv.setUint32(34, rijBytes*h, true);
+  const ppm = Math.round(o.pxcm*100); dv.setInt32(38, ppm, true); dv.setInt32(42, ppm, true);
+  dv.setUint32(46, n, true); dv.setUint32(50, n, true);           // biClrUsed, biClrImportant
+  o.palet.forEach((hex, i)=>{ const [r,g,b] = hexNaarRgb(hex); const p = 54 + i*4; uit[p] = b; uit[p+1] = g; uit[p+2] = r; uit[p+3] = 0; });
+  for(let y=0;y<h;y++){
+    const p = kop + (h-1-y)*rijBytes;
+    o.rij(y, uit.subarray(p, p+w));
+    if(o.voortgang && (y&255)===255){ await o.voortgang(y/h); if(o.geannuleerd && o.geannuleerd()) return null; }
+  }
+  return new Blob([uit], {type:'image/bmp'});
+}
+function leesBmp(bytes){
+  if(bytes.length < 54 || bytes[0]!==0x42 || bytes[1]!==0x4D) return null;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const offBits = dv.getUint32(10, true), kopGrootte = dv.getUint32(14, true);
+  if(kopGrootte < 40) return null;
+  const w = dv.getInt32(18, true); let h = dv.getInt32(22, true);
+  const bits = dv.getUint16(28, true), compressie = dv.getUint32(30, true);
+  if(bits!==8 || compressie!==0 || w<=0 || h===0) return null;
+  const topDown = h < 0; h = Math.abs(h);
+  if(w*h > MAX_PX || w > MAX_ZIJDE || h > MAX_ZIJDE) return null;
+  let n = dv.getUint32(46, true); if(!n || n > 256) n = 256;
+  const ppm = dv.getInt32(38, true), palStart = 14 + kopGrootte, plte = [];
+  for(let i=0;i<n && palStart+i*4+3 < offBits;i++) plte.push(rgbNaarHex(bytes[palStart+i*4+2], bytes[palStart+i*4+1], bytes[palStart+i*4]));
+  const rijBytes = (w + 3) & ~3;
+  if(!plte.length || offBits + rijBytes*h > bytes.length) return null;
+  const idx = new Uint8Array(w*h);
+  for(let y=0;y<h;y++){ const bron = offBits + (topDown ? y : h-1-y)*rijBytes; idx.set(bytes.subarray(bron, bron+w), y*w); }
+  return {info:{w, h, plte, trns:null, pxcm: ppm>0 ? ppm/100 : null, ws:null, tekst:{}}, idx};
+}
+
 const EXPORT_FORMATEN = [
   {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'garennummers en maat in cm zitten in het bestand; per laag doorzichtig', wat:['kleed','selectie','lagen'], maat:false},
   {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
+  {id:'bmp',     naam:'BMP 8 bits',                       uitleg:'geïndexeerd zonder compressie, voor weefsoftware die geen PNG leest', wat:['kleed','selectie'], maat:false},
   {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en garens; later weer te openen',           wat:['kleed'], maat:false},
   {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
 ];
@@ -4911,6 +4959,14 @@ async function exportMaak(o, voortgang, geannuleerd){
       rij:(y, uit)=>{ uit.set(samenIdx.subarray((r.y0+y)*w + r.x0, (r.y0+y)*w + r.x0 + r.w)); }, voortgang, geannuleerd});
     if(!blob) return null;
     return {blob, naam:naam+(o.wat==='selectie' ? '_sel' : '')+'_'+r.w+'x'+r.h+'.png'};
+  }
+  if(o.formaat==='bmp'){
+    verzekerComposiet();
+    const w = doc.w;
+    const blob = await maakBmp({w:r.w, h:r.h, palet:doc.palet, pxcm:doc.pxcm, voortgang, geannuleerd,
+      rij:(y, uit)=>{ uit.set(samenIdx.subarray((r.y0+y)*w + r.x0, (r.y0+y)*w + r.x0 + r.w)); }});
+    if(!blob) return null;
+    return {blob, naam:naam+(o.wat==='selectie' ? '_sel' : '')+'_'+r.w+'x'+r.h+'.bmp'};
   }
   if(o.formaat==='pngrgb'){
     if(o.wat==='lagen'){
@@ -4948,6 +5004,7 @@ async function maakReservekopie(voortgang, geannuleerd){
 }
 function mimeVoor(naam){
   if(/\.png$/i.test(naam)) return 'image/png';
+  if(/\.bmp$/i.test(naam)) return 'image/bmp';
   if(/\.zip$/i.test(naam)) return 'application/zip';
   if(/\.json$/i.test(naam)) return 'application/json';
   return 'application/octet-stream';
@@ -5007,7 +5064,8 @@ function exportDialoog(){
       const uitW = r.w*blok, uitH = r.h*blok;
       tekst = (exportKeuze.wat==='lagen' ? doc.lagen.length+' bestanden in een zip, elk ' : '') + uitW+' × '+uitH+' pixels ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm)';
       if(uitW*uitH > MAX_PX) tekst += ' — te groot, kies kleinere blokken';
-      if(f.id==='pngidx') tekst += ' · '+doc.palet.length+' garens, '+nlGetal(doc.pxcm,0)+' per cm in het bestand';
+      if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' garens, '+nlGetal(doc.pxcm,0)+' per cm in het bestand';
+      if(f.id==='bmp') tekst += ' · '+maatTekstBestand(bmpGrootte(r.w, r.h, doc.palet.length));
     }
     info.textContent = tekst;
   };
@@ -5263,6 +5321,36 @@ async function zelftest(){
       const px = g.getImageData(0, 0, 64, 48).data, vol = (12*64+12)*4, gat = (20*64+20)*4;
       return px[vol+3]===255 && px[gat+3]===0 && r.naam==='zt_lagen.zip';
     });
+    await test('BMP: grootte volgens formule, rijen van onder naar boven, maat in de kop', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'bmp', naam:'zt'}, niets, nooit);
+      const b = await blobNaarBytes(r.blob), dv = new DataView(b.buffer);
+      if(b.length!==bmpGrootte(64, 48, doc.palet.length) || b.length!==54+4*5+64*48) return 'grootte '+b.length;
+      if(dv.getUint32(2, true)!==b.length || dv.getUint32(10, true)!==54+20 || dv.getUint16(28, true)!==8 || dv.getUint32(46, true)!==5) return 'kop';
+      if(dv.getInt32(38, true)!==1400 || dv.getInt32(42, true)!==1400) return 'pels per meter '+dv.getInt32(38, true);
+      for(let i=0;i<5;i++){ const [R,G,B] = hexNaarRgb(doc.palet[i]); if(b[54+i*4]!==B || b[55+i*4]!==G || b[56+i*4]!==R || b[57+i*4]!==0) return 'palet BGRA bij '+i; }
+      const kop = 74;
+      for(let x=0;x<64;x++){ if(b[kop+x]!==samenIdx[47*64+x]) return 'eerste rij ≠ onderste rij'; if(b[kop+47*64+x]!==samenIdx[x]) return 'laatste rij ≠ bovenste rij'; }
+      return r.naam==='zt_64x48.bmp';
+    });
+    await test('BMP: de browser leest hem en kleuren kloppen', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'bmp', naam:'zt'}, niets, nooit);
+      let bm; try{ bm = await createImageBitmap(r.blob); }catch(e){ return 'overgeslagen (browser leest geen BMP)'; }
+      if(bm.width!==64 || bm.height!==48) return 'maat '+bm.width+'x'+bm.height;
+      const c = document.createElement('canvas'); c.width = 64; c.height = 48;
+      const g = c.getContext('2d'); g.drawImage(bm, 0, 0);
+      const px = g.getImageData(0, 0, 64, 48).data, P = paletPlat();
+      for(let i=0;i<64*48;i++){ const k = samenIdx[i]*3; if(px[i*4]!==P[k] || px[i*4+1]!==P[k+1] || px[i*4+2]!==P[k+2]) return 'afwijking bij punt '+i; }
+      return true;
+    });
+    await test('BMP selectie + eigen lezer = samenIdx', async ()=>{
+      selZetRuw(rleCodeer(maskRechthoek(10, 10, 29, 29)));
+      const r = await exportMaak({wat:'selectie', formaat:'bmp', naam:'zt'}, niets, nooit);
+      selZetRuw(null);
+      const b = leesBmp(await blobNaarBytes(r.blob));
+      if(!b || b.info.w!==20 || b.info.h!==20 || b.info.pxcm!==14 || b.info.plte.join()!==doc.palet.join()) return 'lezer: '+JSON.stringify(b && b.info);
+      for(let y=0;y<20;y++) for(let x=0;x<20;x++) if(b.idx[y*20+x]!==samenIdx[(10+y)*64+10+x]) return 'afwijking bij '+x+','+y;
+      return r.naam==='zt_sel_20x20.bmp' && r.blob.size===54+20+20*20;
+    });
     await test('Import geïndexeerde PNG als laag: garens op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
@@ -5288,7 +5376,19 @@ async function zelftest(){
       for(let i=0;i<D.length;i++) if(D[i]!==samenKopie[i]) return 'afwijking bij punt '+i+': '+D[i]+' ≠ '+samenKopie[i];
       return doc.lagen.length===2;
     });
-    await test('Import vreemde geïndexeerde PNG (zonder weefstudio-chunk): alleen gebruikte kleuren, 72 dpi genegeerd', async ()=>{
+    await test('Import BMP als nieuw kleed: palet, garennummers en maat gelijk', async ()=>{
+      verzekerComposiet();
+      const samenNu = samenIdx.slice(), paletNu = doc.palet.slice(), w = doc.w, h = doc.h;
+      const r = await exportMaak({wat:'kleed', formaat:'bmp', naam:'zt'}, niets, nooit);
+      const b = leesBmp(await blobNaarBytes(r.blob));
+      await importIndexAlsNieuw(b.info, b.idx, 'bmprondreis');
+      if(doc.naam!=='bmprondreis' || doc.w!==w || doc.h!==h || doc.pxcm!==14) return 'maat/naam';
+      if(doc.palet.join()!==paletNu.join()) return 'palet '+doc.palet.join();
+      const D = doc.lagen[0].data;
+      for(let i=0;i<D.length;i++) if(D[i]!==samenNu[i]) return 'afwijking bij punt '+i;
+      return true;
+    });
+    await test('Import vreemde PNG zonder weefstudio-chunk: 4 bits, palet ≤ 28 blijft heel, 72 dpi genegeerd', async ()=>{
       const w = 10, h = 6, pal = [];
       for(let i=0;i<16;i++) pal.push(rgbNaarHex(i*16, 255-i*16, (i*37)&255));
       const rijen = new Bytes();
@@ -5302,10 +5402,24 @@ async function zelftest(){
       const info = leesPng(await blobNaarBytes(png)), idx = await pngIndices(info);
       if(idx[0]!==1 || idx[9]!==1 || idx[5*w]!==1 || idx[5*w+4]!==9 || idx[5*w+9]!==14) return 'bitdiepte 4 verkeerd gelezen: '+Array.from(idx.subarray(5*w, 6*w)).join(',');
       await importIndexAlsNieuw(info, idx, 'vreemd');
-      if(doc.palet.length!==3 || doc.palet.join()!==[pal[1], pal[9], pal[14]].join()) return 'palet '+doc.palet.join();
+      if(doc.palet.length!==16 || doc.palet.join()!==pal.join()) return 'palet '+doc.palet.join();
       if(doc.pxcm!==14) return 'pxcm '+doc.pxcm;
       const D = doc.lagen[0].data;
-      return D[0]===0 && D[5*w+4]===1 && D[5*w+9]===2 && doc.w===w && doc.h===h;
+      return D[0]===1 && D[5*w+4]===9 && D[5*w+9]===14 && doc.w===w && doc.h===h;
+    });
+    await test('Import PNG met groot palet (40 kleuren, 3 gebruikt): alleen gebruikte kleuren', async ()=>{
+      const w = 8, h = 4, pal = [];
+      for(let i=0;i<40;i++) pal.push(rgbNaarHex((i*6)&255, (i*11)&255, (i*17)&255));
+      const rijen = new Bytes();
+      for(let y=0;y<h;y++){ rijen.u8(0); for(let x=0;x<w;x++) rijen.u8(x<3 ? 7 : (y<2 ? 20 : 39)); }
+      const idat = await comprimeer(rijen.af(), 'deflate');
+      const plte = new Uint8Array(120); pal.forEach((hx,i)=>{ const [r,g,b] = hexNaarRgb(hx); plte[i*3]=r; plte[i*3+1]=g; plte[i*3+2]=b; });
+      const png = new Blob([PNG_SIG, pngChunk('IHDR', new Bytes().u32be(w).u32be(h).u8(8).u8(3).u8(0).u8(0).u8(0).af()), pngChunk('PLTE', plte), pngChunk('IDAT', idat), pngChunk('IEND', new Uint8Array(0))]);
+      const info = leesPng(await blobNaarBytes(png)), idx = await pngIndices(info);
+      await importIndexAlsNieuw(info, idx, 'groot');
+      if(doc.palet.join()!==[pal[7], pal[20], pal[39]].join()) return 'palet '+doc.palet.join();
+      const D = doc.lagen[0].data;
+      return D[0]===0 && D[3]===1 && D[3*w+7]===2;
     });
     await test('Reservekopie: één kleed per galerij-item', async ()=>{
       const n = (await galerijLijst()).length;
