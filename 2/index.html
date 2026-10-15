@@ -514,7 +514,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Verloopstift en verloopvul gebruiken het actieve verloop (onder Stiften of Vullen): elk verloop heeft zijn eigen garens en er zijn zes stijlen. Zonder gekozen garens lopen ze vanaf het actieve garen door het palet.</p>
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
           <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
-          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in.</p>
+          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per garen" geeft per gebruikt garen een doorzichtige PNG (in garenkleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de garenlijst: per garen punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
           <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om garenmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
@@ -557,7 +557,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.7';
+const APP_VERSIE = '2.8';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -4423,7 +4423,7 @@ async function importGeindexeerd(f){
   if(modus==='ref'){ zetRef(f); return true; }
   if(!idx) idx = await pngIndices(info);
   if(modus==='laag') importIndexAlsLaag(info, idx);
-  else await importIndexAlsNieuw(info, idx, f.name.replace(/\.[^.]+$/, ''));
+  else await importIndexAlsNieuw(info, idx, naamUitBestand(f));
   return true;
 }
 function importAfbeeldingBestand(f){
@@ -4433,8 +4433,11 @@ function importAfbeeldingBestand(f){
     if(modus==='import' || modus==='project') modus = doc ? 'laag' : 'nieuw';
     if(modus==='ref') zetRef(f);
     else if(modus==='laag') importAlsLaag(img);
-    else importAlsNieuw(img, f.name.replace(/\.[^.]+$/, ''));
+    else importAlsNieuw(img, naamUitBestand(f));
   }).catch(()=>toast('Dit bestand kan niet als afbeelding geopend worden'));
+}
+function naamUitBestand(f){
+  return f.name.replace(/\.[^.]+$/, '').replace(/(_sel)?_\d+x\d+$/, '').replace(/_garen\d\d_[0-9a-f]{6}$/, '') || 'import';
 }
 function pngDoorzichtig(info){
   const t = new Uint8Array(256);
@@ -4920,15 +4923,47 @@ function leesBmp(bytes){
   return {info:{w, h, plte, trns:null, pxcm: ppm>0 ? ppm/100 : null, ws:null, tekst:{}}, idx};
 }
 
+function garenTelling(r){
+  verzekerComposiet();
+  const tel = new Uint32Array(256), w = doc.w;
+  for(let y=0;y<r.h;y++){ const rij = (r.y0+y)*w + r.x0; for(let x=0;x<r.w;x++) tel[samenIdx[rij+x]]++; }
+  return tel;
+}
+function csvVeld(s){ s = String(s); return /[;"\r\n]/.test(s) ? '"'+s.replace(/"/g, '""')+'"' : s; }
+function garenlijstBestanden(naam, r, tel){
+  const enc = new TextEncoder(), totaal = r.w*r.h, cmW = r.w/doc.pxcm, cmH = r.h/doc.pxcm;
+  const garens = doc.palet.map((hex, i)=>{
+    const [R,G,B] = hexNaarRgb(hex), n = tel[i];
+    return {nummer:i, hex, r:R, g:G, b:B, punten:n, procent:Math.round(n/totaal*10000)/100, cm2:Math.round(n/(doc.pxcm*doc.pxcm)*100)/100};
+  });
+  const pxcmTekst = String(doc.pxcm).replace('.', ',');
+  const csv = ['nummer;hex;R;G;B;punten;procent;cm2;kleed;pxcm;breedte_cm;hoogte_cm'];
+  garens.forEach(g=>csv.push([g.nummer, g.hex, g.r, g.g, g.b, g.punten, nlGetal(g.procent, 2), nlGetal(g.cm2, 2), csvVeld(doc.naam), pxcmTekst, nlGetal(cmW, 1), nlGetal(cmH, 1)].join(';')));
+  const json = {app:'weefstudio', versie:APP_VERSIE, naam:doc.naam, pxcm:doc.pxcm, w:r.w, h:r.h, breedte_cm:Math.round(cmW*10)/10, hoogte_cm:Math.round(cmH*10)/10, palet:doc.palet, totaal, garens};
+  const gpl = ['GIMP Palette', 'Name: '+doc.naam.replace(/[\r\n]+/g, ' '), 'Columns: 8', '#'];
+  garens.forEach(g=>gpl.push(String(g.r).padStart(3)+' '+String(g.g).padStart(3)+' '+String(g.b).padStart(3)+'\tgaren '+tweeCijfers(g.nummer)+' '+g.hex));
+  return [
+    {naam:naam+'_garens.csv',  data:enc.encode('\uFEFF'+csv.join('\r\n')+'\r\n'), comprimeer:true},   // BOM: dan weet Excel dat het UTF-8 is
+    {naam:naam+'_garens.json', data:enc.encode(JSON.stringify(json, null, 1)), comprimeer:true},
+    {naam:naam+'_garens.gpl',  data:enc.encode(gpl.join('\n')+'\n'), comprimeer:true},
+  ];
+}
+function garensInGebruik(tel, metDoek){
+  const lijst = [];
+  for(let i=0;i<doc.palet.length;i++) if(tel[i] && (i>0 || metDoek)) lijst.push(i);
+  return lijst;
+}
+
 const EXPORT_FORMATEN = [
-  {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'garennummers en maat in cm zitten in het bestand; per laag doorzichtig', wat:['kleed','selectie','lagen'], maat:false},
+  {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'garennummers en maat in cm zitten in het bestand; per laag of per garen doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
   {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
   {id:'bmp',     naam:'BMP 8 bits',                       uitleg:'geïndexeerd zonder compressie, voor weefsoftware die geen PNG leest', wat:['kleed','selectie'], maat:false},
+  {id:'garenlijst', naam:'Garenlijst (CSV, JSON, GPL)',   uitleg:'per garen het aantal punten, procent en cm²; zit ook in elke zip',    wat:['kleed','selectie'], maat:false},
   {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en garens; later weer te openen',           wat:['kleed'], maat:false},
   {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
 ];
-const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag']];
-const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, naam:''};
+const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag'],['garen','per garen']];
+const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, naam:'', garenZwart:false, metDoek:false};
 let exportTaak = null;      // {geannuleerd, blob, naam}
 
 async function exportMaak(o, voortgang, geannuleerd){
@@ -4940,9 +4975,28 @@ async function exportMaak(o, voortgang, geannuleerd){
   if(o.formaat==='reserve') return maakReservekopie(voortgang, geannuleerd);
   const r = exportRect(o.wat), blok = o.maat ? o.blok : 1;
   if(r.w*blok*r.h*blok > MAX_PX) throw new Error('Te groot: '+(r.w*blok)+' × '+(r.h*blok)+' pixels. Kies kleinere blokken (maximaal 16 miljoen pixels).');
+  if(o.formaat==='garenlijst'){
+    const tel = garenTelling(r);
+    await voortgang(0.5);
+    return {blob: await maakZip(garenlijstBestanden(naam, r, tel)), naam:naam+'_garenlijst.zip'};
+  }
   if(o.formaat==='pngidx'){
     verzekerComposiet();
     const w = doc.w;
+    if(o.wat==='garen'){
+      const tel = garenTelling(r), lijst = garensInGebruik(tel, o.metDoek), bestanden = [];
+      if(!lijst.length) throw new Error('Geen garens in gebruik');
+      for(let k=0;k<lijst.length;k++){
+        const i = lijst[k], hex = doc.palet[i];
+        const blob = await maakPngIndex({w:r.w, h:r.h, palet:[o.garenZwart ? '#000000' : hex], transparant:1, pxcm:doc.pxcm, naam:naam+' garen '+tweeCijfers(i), extra:{garen:i, hex},
+          rij:(y, uit)=>{ const rij = (r.y0+y)*w + r.x0; for(let x=0;x<r.w;x++) uit[x] = samenIdx[rij+x]===i ? 0 : 1; },
+          voortgang: async f=>voortgang((k+f)/lijst.length), geannuleerd});
+        if(!blob) return null;
+        bestanden.push({naam:naam+'_garen'+tweeCijfers(i)+'_'+hex.slice(1)+'.png', data:blob});
+      }
+      bestanden.push(...garenlijstBestanden(naam, r, tel));
+      return {blob: await maakZip(bestanden), naam:naam+'_per_garen.zip'};
+    }
     if(o.wat==='lagen'){
       const bestanden = [], T = doc.palet.length;        // doorzichtig = extra index achter het palet
       for(let i=0;i<doc.lagen.length;i++){
@@ -4953,6 +5007,7 @@ async function exportMaak(o, voortgang, geannuleerd){
         if(!blob) return null;
         bestanden.push({naam:naam+'_laag'+tweeCijfers(i+1)+'_'+veiligeNaam(L.naam)+'.png', data:blob});
       }
+      bestanden.push(...garenlijstBestanden(naam, r, garenTelling(r)));
       return {blob: await maakZip(bestanden), naam:naam+'_lagen.zip'};
     }
     const blob = await maakPngIndex({w:r.w, h:r.h, palet:doc.palet, transparant:null, pxcm:doc.pxcm, naam,
@@ -4978,6 +5033,7 @@ async function exportMaak(o, voortgang, geannuleerd){
         if(geannuleerd()) return null;
       }
       canvas.width = 1; canvas.height = 1;
+      bestanden.push(...garenlijstBestanden(naam, r, garenTelling(r)));
       return {blob: await maakZip(bestanden), naam:naam+'_lagen.zip'};
     }
     await voortgang(0.3);
@@ -5005,6 +5061,8 @@ async function maakReservekopie(voortgang, geannuleerd){
 function mimeVoor(naam){
   if(/\.png$/i.test(naam)) return 'image/png';
   if(/\.bmp$/i.test(naam)) return 'image/bmp';
+  if(/\.csv$/i.test(naam)) return 'text/csv';
+  if(/\.gpl$/i.test(naam)) return 'text/plain';
   if(/\.zip$/i.test(naam)) return 'application/zip';
   if(/\.json$/i.test(naam)) return 'application/json';
   return 'application/octet-stream';
@@ -5022,13 +5080,17 @@ function exportDialoog(){
   const maatRij = maak('div', 'rij'), maatSeg = maak('div', 'seg klein');
   const blokIn = maak('input'); blokIn.type = 'number'; blokIn.min = 2; blokIn.max = 16; blokIn.value = Math.max(2, exportKeuze.blok);
   maatRij.append(maak('span', 'rijlabel', 'maat'), maatSeg, blokIn);
+  const optieRij = maak('div', 'rij'), optieSeg = maak('div', 'seg klein'), optieSeg2 = maak('div', 'seg klein');
+  optieRij.append(maak('span', 'rijlabel', 'opties'), optieSeg, optieSeg2);
+  optieRij.style.flexWrap = 'wrap';
   const naamRij = maak('div', 'rij'); const naamIn = maak('input'); naamIn.type = 'text'; naamIn.value = exportKeuze.naam; naamIn.style.flex = '1';
   naamRij.append(maak('span', 'rijlabel', 'naam'), naamIn);
   const info = maak('div', 'uitleg');
+  let telKleed = null;      // garentelling van het hele kleed, één keer per dialoog
   const voortgang = maak('div', 'voortgang'); voortgang.hidden = true; const balk = maak('i'); voortgang.appendChild(balk);
   const status = maak('div', 'uitleg'); status.hidden = true;
   const knoppen = maak('div', 'dialoogknoppen');
-  vak.append(watRij, maak('div','sectiekop','formaat'), formSeg, maatRij, naamRij, info, voortgang, status, knoppen);
+  vak.append(watRij, maak('div','sectiekop','formaat'), formSeg, maatRij, optieRij, naamRij, info, voortgang, status, knoppen);
 
   const formaat = ()=>EXPORT_FORMATEN.find(f=>f.id===exportKeuze.formaat) || EXPORT_FORMATEN[0];
   const bouw = ()=>{
@@ -5056,13 +5118,31 @@ function exportDialoog(){
       maatSeg.appendChild(b);
     });
     blokIn.style.display = exportKeuze.blok>1 ? '' : 'none';
+    optieRij.style.display = exportKeuze.wat==='garen' ? '' : 'none';
+    optieSeg.innerHTML = ''; optieSeg2.innerHTML = '';
+    if(exportKeuze.wat==='garen'){
+      [[false,'garenkleur'],[true,'zwart']].forEach(([v, tekst])=>{
+        const b = maak('button', v===exportKeuze.garenZwart ? 'actief' : '', tekst);
+        b.addEventListener('click', ()=>{ exportKeuze.garenZwart = v; bouw(); });
+        optieSeg.appendChild(b);
+      });
+      [[false,'zonder doekgaren'],[true,'met doekgaren']].forEach(([v, tekst])=>{
+        const b = maak('button', v===exportKeuze.metDoek ? 'actief' : '', tekst);
+        b.addEventListener('click', ()=>{ exportKeuze.metDoek = v; bouw(); });
+        optieSeg2.appendChild(b);
+      });
+    }
     const r = exportRect(exportKeuze.wat), blok = f.maat ? exportKeuze.blok : 1;
     let tekst = '';
     if(f.id==='project') tekst = 'Het hele kleed met lagen, garens en verlopen, als .weefstudio.json.';
     else if(f.id==='reserve') tekst = 'Alle kleden uit de galerij in één bestand. Bewaar het af en toe in Bestanden of iCloud.';
+    else if(f.id==='garenlijst') tekst = 'Per garen het aantal rasterpunten, procent en cm² van '+(exportKeuze.wat==='selectie' ? 'de selectie' : 'het hele kleed')+': CSV (Numbers, Excel), JSON en GPL-palet, samen in een zip.';
     else {
       const uitW = r.w*blok, uitH = r.h*blok;
-      tekst = (exportKeuze.wat==='lagen' ? doc.lagen.length+' bestanden in een zip, elk ' : '') + uitW+' × '+uitH+' pixels ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm)';
+      let voor = '';
+      if(exportKeuze.wat==='lagen') voor = doc.lagen.length+' bestanden + garenlijst in een zip, elk ';
+      else if(exportKeuze.wat==='garen'){ if(!telKleed) telKleed = garenTelling(r); const n = garensInGebruik(telKleed, exportKeuze.metDoek).length; voor = n+' garen'+(n===1?'':'s')+' in gebruik → '+n+' bestanden + garenlijst in een zip, elk '; }
+      tekst = voor + uitW+' × '+uitH+' pixels ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm)';
       if(uitW*uitH > MAX_PX) tekst += ' — te groot, kies kleinere blokken';
       if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' garens, '+nlGetal(doc.pxcm,0)+' per cm in het bestand';
       if(f.id==='bmp') tekst += ' · '+maatTekstBestand(bmpGrootte(r.w, r.h, doc.palet.length));
@@ -5252,8 +5332,8 @@ async function zelftest(){
     await test('PNG per laag: zip, namen, doorzichtig waar leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngrgb', blok:1, maat:true, naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
-      if(items.length!==3) return 'aantal '+items.length;
-      if(items[1].naam!=='zt_laag02_laag 1.png') return 'naam '+items[1].naam;
+      if(items.length!==6) return 'aantal '+items.length;
+      if(items[1].naam!=='zt_laag02_laag 1.png' || items[3].naam!=='zt_garens.csv') return 'naam '+items[1].naam+' / '+items[3].naam;
       const bm = await createImageBitmap(new Blob([items[1].inhoud], {type:'image/png'}));
       const c = document.createElement('canvas'); c.width = 64; c.height = 48;
       const g = c.getContext('2d'); g.drawImage(bm, 0, 0);
@@ -5310,7 +5390,7 @@ async function zelftest(){
     await test('PNG geïndexeerd per laag: zip, tRNS, leeg = doorzichtige extra index', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
-      if(items.length!==3 || items[1].naam!=='zt_laag02_laag 1.png') return 'zip '+items.map(i=>i.naam).join(',');
+      if(items.length!==6 || items[1].naam!=='zt_laag02_laag 1.png' || items[5].naam!=='zt_garens.gpl') return 'zip '+items.map(i=>i.naam).join(',');
       const info = leesPng(items[1].inhoud), T = doc.palet.length;
       if(!info.plte || info.plte.length!==T+1 || !info.trns || info.trns[T]!==0 || info.trns[0]!==255) return 'PLTE/tRNS '+JSON.stringify([info.plte && info.plte.length, info.trns && Array.from(info.trns)]);
       const idx = await pngIndices(info), B = doc.lagen[1].data;
@@ -5350,6 +5430,44 @@ async function zelftest(){
       if(!b || b.info.w!==20 || b.info.h!==20 || b.info.pxcm!==14 || b.info.plte.join()!==doc.palet.join()) return 'lezer: '+JSON.stringify(b && b.info);
       for(let y=0;y<20;y++) for(let x=0;x<20;x++) if(b.idx[y*20+x]!==samenIdx[(10+y)*64+10+x]) return 'afwijking bij '+x+','+y;
       return r.naam==='zt_sel_20x20.bmp' && r.blob.size===54+20+20*20;
+    });
+    const telZt = garenTelling({x0:0, y0:0, w:64, h:48});
+    await test('Per garen: gebruikte garens, twee indices, doorzichtig elders, garenlijst erbij', async ()=>{
+      const r = await exportMaak({wat:'garen', formaat:'pngidx', naam:'zt', garenZwart:false, metDoek:false}, niets, nooit);
+      const items = await leesZip(await blobNaarBytes(r.blob));
+      const namen = items.map(i=>i.naam);
+      if(items.length!==6 || namen[0]!=='zt_garen01_1a1a1a.png' || namen[2]!=='zt_garen03_d23c2a.png' || namen[3]!=='zt_garens.csv') return 'zip '+namen.join(',');
+      const info = leesPng(items[1].inhoud);
+      if(!info.plte || info.plte[0]!=='#d23c2a' || info.plte.length!==2 || !info.trns || info.trns[0]!==255 || info.trns[1]!==0) return 'PLTE/tRNS '+JSON.stringify([info.plte, info.trns && Array.from(info.trns)]);
+      if(!info.ws || info.ws.garen!==2 || info.ws.hex!=='#d23c2a') return 'weefstudio-chunk '+JSON.stringify(info.ws);
+      const idx = await pngIndices(info);
+      for(let i=0;i<idx.length;i++) if(idx[i]!==(samenIdx[i]===2 ? 0 : 1)) return 'afwijking bij punt '+i;
+      return r.naam==='zt_per_garen.zip';
+    });
+    await test('Per garen: zwart op doorzichtig, met doekgaren', async ()=>{
+      const r = await exportMaak({wat:'garen', formaat:'pngidx', naam:'zt', garenZwart:true, metDoek:true}, niets, nooit);
+      const items = await leesZip(await blobNaarBytes(r.blob));
+      if(items.length!==7 || items[0].naam!=='zt_garen00_f2ead8.png') return 'zip '+items.map(i=>i.naam).join(',');
+      const info = leesPng(items[0].inhoud), idx = await pngIndices(info);
+      if(info.plte[0]!=='#000000') return 'PLTE '+info.plte.join();
+      for(let i=0;i<idx.length;i++) if(idx[i]!==(samenIdx[i]===0 ? 0 : 1)) return 'afwijking bij punt '+i;
+      return true;
+    });
+    await test('Garenlijst: CSV, JSON en GPL kloppen met de telling', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'garenlijst', naam:'zt'}, niets, nooit);
+      const items = await leesZip(await blobNaarBytes(r.blob)), dec = new TextDecoder();
+      if(items.length!==3 || r.naam!=='zt_garenlijst.zip') return 'zip '+items.map(i=>i.naam).join(',');
+      const csv = dec.decode(items[0].inhoud).replace(/^\uFEFF/, '').trim().split('\r\n');
+      if(csv.length!==6 || !csv[0].startsWith('nummer;hex;R;G;B;punten;procent;cm2;kleed')) return 'csv '+csv[0];
+      const kol = csv.slice(1).map(l=>l.split(';'));
+      const som = kol.reduce((s,k)=>s+ +k[5], 0), proc = kol.reduce((s,k)=>s+parseFloat(k[6].replace(',', '.')), 0);
+      if(som!==64*48 || Math.abs(proc-100)>0.1) return 'telling '+som+' / '+proc;
+      if(kol[2][5]!==String(telZt[2]) || kol[2][1]!=='#d23c2a' || kol[2][8]!=='zelftest' || kol[2][9]!=='14') return 'rij garen 2: '+csv[3];
+      const json = JSON.parse(dec.decode(items[1].inhoud));
+      if(json.garens.length!==5 || json.totaal!==3072 || json.garens[2].punten!==telZt[2] || json.pxcm!==14 || json.palet.join()!==doc.palet.join()) return 'json';
+      const gpl = dec.decode(items[2].inhoud).trim().split('\n');
+      if(gpl[0]!=='GIMP Palette' || gpl.length!==9 || !/^\s*26\s+26\s+26\tgaren 01 #1a1a1a$/.test(gpl[5])) return 'gpl '+gpl[5];
+      return items[0].methode===8 || items[0].methode===0;
     });
     await test('Import geïndexeerde PNG als laag: garens op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
