@@ -515,6 +515,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
           <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
           <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per garen" geeft per gebruikt garen een doorzichtige PNG (in garenkleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de garenlijst: per garen punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren. SVG geeft per garen een vectorpad dat de rasterpunten exact volgt, met de maat in mm: voor vinyl- en lasersnijden, plotters en drukwerk op elke grootte. PDF op ware grootte (of 1:2, 1:5, 1:10) is om te printen bij een copyshop of op een plotter; het palet en de garennummers zitten erin, de blokken blijven scherp.</p>
+          <p>Voor het getouw (bij PNG en BMP van het hele kleed of een selectie): "dichtheid anders" rekent het ontwerp om naar een andere dichtheid, ook ongelijk in breedte en hoogte (bijvoorbeeld 14 × 12 per cm), met naaste buur of de meerderheid per blok. "Stroken" deelt een breed kleed op in panelen van hooguit zoveel cm met overlap, elk een eigen bestand; de snijlijnen staan in panelen.csv en in de garenlijst. Dit is rekenwerk op rasterpunten, geen weefsimulatie.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
           <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om garenmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
@@ -557,7 +558,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.10';
+const APP_VERSIE = '2.11';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -4768,6 +4769,24 @@ async function pngRgbVanLaag(L, r, blok, canvas){
   c2.width = 1; c2.height = 1;
   return blob;
 }
+async function pngRgbVanRijen(w, h, blok, rij){
+  const P = paletPlat(), c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d'), img = g.createImageData(w, h), D = img.data, buf = new Uint8Array(w);
+  for(let y=0;y<h;y++){
+    rij(y, buf);
+    for(let x=0;x<w;x++){ const j = (y*w+x)*4, p = buf[x]*3; D[j]=P[p]; D[j+1]=P[p+1]; D[j+2]=P[p+2]; D[j+3]=255; }
+  }
+  g.putImageData(img, 0, 0);
+  if(blok===1){ const b = await canvasNaarBlob(c); c.width = 1; c.height = 1; return b; }
+  const c2 = document.createElement('canvas');
+  c2.width = w*blok; c2.height = h*blok;
+  const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false;
+  g2.drawImage(c, 0, 0, c2.width, c2.height);
+  const b = await canvasNaarBlob(c2);
+  c.width = 1; c.height = 1; c2.width = 1; c2.height = 1;
+  return b;
+}
 function tweeCijfers(n){ return String(n).padStart(2, '0'); }
 function maatTekstBestand(b){ return b >= 1048576 ? nlGetal(b/1048576, 1)+' MB' : nlGetal(b/1024, 0)+' kB'; }
 
@@ -4789,8 +4808,8 @@ async function maakPngIndex(o){
   pal.forEach((hex,i)=>{ const [r,g,b] = hexNaarRgb(hex); plte[i*3]=r; plte[i*3+1]=g; plte[i*3+2]=b; });
   delen.push(pngChunk('PLTE', plte));
   if(transparant!==null){ const trns = new Uint8Array(pal.length).fill(255); trns[transparant] = 0; delen.push(pngChunk('tRNS', trns)); }
-  const ppm = Math.round(o.pxcm*100);
-  delen.push(pngChunk('pHYs', new Bytes().u32be(ppm).u32be(ppm).u8(1).af()));
+  const ppm = Math.round(o.pxcm*100), ppmY = Math.round((o.pxcmY || o.pxcm)*100);
+  delen.push(pngChunk('pHYs', new Bytes().u32be(ppm).u32be(ppmY).u8(1).af()));
   const latin1 = s=>Uint8Array.from(s, ch=>{ const c = ch.charCodeAt(0); return (c>=32 && c<127) || (c>=160 && c<256) ? c : 63; });  // tEXt is Latin-1
   const tekst = (k, v)=>pngChunk('tEXt', new Bytes().tekst(k).u8(0).bytes(latin1(v)).af());
   const ws = Object.assign({pxcm:o.pxcm, w, h, palet:o.palet}, transparant!==null ? {transparant} : {}, o.extra||{});
@@ -4843,7 +4862,7 @@ function leesPng(bytes){
     if(type==='IHDR'){ info.w = dv.getUint32(p+8); info.h = dv.getUint32(p+12); info.bitdiepte = bytes[p+16]; info.kleurtype = bytes[p+17]; info.interlace = bytes[p+20]; }
     else if(type==='PLTE'){ info.plte = []; for(let i=0;i+2<len;i+=3) info.plte.push(rgbNaarHex(data[i], data[i+1], data[i+2])); }
     else if(type==='tRNS'){ info.trns = data.slice(); }
-    else if(type==='pHYs'){ const x = dv.getUint32(p+8); if(bytes[p+16]===1 && x>0) info.pxcm = x/100; }
+    else if(type==='pHYs'){ const x = dv.getUint32(p+8), y = dv.getUint32(p+12); if(bytes[p+16]===1 && x>0){ info.pxcm = x/100; info.pxcmY = y/100; } }
     else if(type==='tEXt'){ const nul = data.indexOf(0); const sleutel = dec.decode(data.subarray(0, nul)), waarde = dec.decode(data.subarray(nul+1)); info.tekst[sleutel] = waarde; if(sleutel==='weefstudio'){ try{ info.ws = JSON.parse(waarde); }catch(e){} } }
     else if(type==='IDAT'){ info.idat.push(data); }
     else if(type==='IEND') break;
@@ -4893,7 +4912,7 @@ async function maakBmp(o){   // o = {w, h, rij(y, uit), palet, pxcm, voortgang, 
   dv.setUint32(14, 40, true); dv.setInt32(18, w, true); dv.setInt32(22, h, true);   // positieve hoogte = van onder naar boven
   dv.setUint16(26, 1, true); dv.setUint16(28, 8, true); dv.setUint32(30, 0, true);  // 1 vlak, 8 bits, BI_RGB
   dv.setUint32(34, rijBytes*h, true);
-  const ppm = Math.round(o.pxcm*100); dv.setInt32(38, ppm, true); dv.setInt32(42, ppm, true);
+  const ppm = Math.round(o.pxcm*100); dv.setInt32(38, ppm, true); dv.setInt32(42, Math.round((o.pxcmY || o.pxcm)*100), true);
   dv.setUint32(46, n, true); dv.setUint32(50, n, true);           // biClrUsed, biClrImportant
   o.palet.forEach((hex, i)=>{ const [r,g,b] = hexNaarRgb(hex); const p = 54 + i*4; uit[p] = b; uit[p+1] = g; uit[p+2] = r; uit[p+3] = 0; });
   for(let y=0;y<h;y++){
@@ -4930,7 +4949,7 @@ function garenTelling(r){
   return tel;
 }
 function csvVeld(s){ s = String(s); return /[;"\r\n]/.test(s) ? '"'+s.replace(/"/g, '""')+'"' : s; }
-function garenlijstBestanden(naam, r, tel){
+function garenlijstBestanden(naam, r, tel, getouw){
   const enc = new TextEncoder(), totaal = r.w*r.h, cmW = r.w/doc.pxcm, cmH = r.h/doc.pxcm;
   const garens = doc.palet.map((hex, i)=>{
     const [R,G,B] = hexNaarRgb(hex), n = tel[i];
@@ -4940,6 +4959,7 @@ function garenlijstBestanden(naam, r, tel){
   const csv = ['nummer;hex;R;G;B;punten;procent;cm2;kleed;pxcm;breedte_cm;hoogte_cm'];
   garens.forEach(g=>csv.push([g.nummer, g.hex, g.r, g.g, g.b, g.punten, nlGetal(g.procent, 2), nlGetal(g.cm2, 2), csvVeld(doc.naam), pxcmTekst, nlGetal(cmW, 1), nlGetal(cmH, 1)].join(';')));
   const json = {app:'weefstudio', versie:APP_VERSIE, naam:doc.naam, pxcm:doc.pxcm, w:r.w, h:r.h, breedte_cm:Math.round(cmW*10)/10, hoogte_cm:Math.round(cmH*10)/10, palet:doc.palet, totaal, garens};
+  if(getouw) json.getouw = getouw;
   const gpl = ['GIMP Palette', 'Name: '+doc.naam.replace(/[\r\n]+/g, ' '), 'Columns: 8', '#'];
   garens.forEach(g=>gpl.push(String(g.r).padStart(3)+' '+String(g.g).padStart(3)+' '+String(g.b).padStart(3)+'\tgaren '+tweeCijfers(g.nummer)+' '+g.hex));
   return [
@@ -5063,6 +5083,75 @@ async function maakPdf(o){   // o = {r, schaal, naam, rij(y, uit), voortgang, ge
   return new Blob([b.af()], {type:'application/pdf'});
 }
 
+function dichtheidMaat(r, pxcmX, pxcmY){
+  return {w: Math.max(1, Math.round(r.w/doc.pxcm*pxcmX)), h: Math.max(1, Math.round(r.h/doc.pxcm*pxcmY))};
+}
+async function herbemonster(r, pxcmX, pxcmY, methode, voortgang, geannuleerd){
+  verzekerComposiet();
+  const {w: uw, h: uh} = dichtheidMaat(r, pxcmX, pxcmY), W = doc.w, uit = new Uint8Array(uw*uh);
+  const sx = r.w/uw, sy = r.h/uh, tel = new Uint32Array(256);          // bronpunten per uitvoerpunt
+  for(let oy=0; oy<uh; oy++){
+    const by0 = Math.floor(oy*sy), by1 = Math.min(r.h, Math.max(by0+1, Math.floor((oy+1)*sy))), bym = Math.min(r.h-1, Math.floor((oy+0.5)*sy));
+    for(let ox=0; ox<uw; ox++){
+      const bx0 = Math.floor(ox*sx), bx1 = Math.min(r.w, Math.max(bx0+1, Math.floor((ox+1)*sx))), bxm = Math.min(r.w-1, Math.floor((ox+0.5)*sx));
+      const midden = samenIdx[(r.y0+bym)*W + r.x0 + bxm];
+      if(methode!=='meerderheid' || (bx1-bx0)*(by1-by0) < 2){ uit[oy*uw+ox] = midden; continue; }
+      for(let y=by0; y<by1; y++){ const rij = (r.y0+y)*W + r.x0; for(let x=bx0; x<bx1; x++) tel[samenIdx[rij+x]]++; }
+      let best = midden, bestN = 0;
+      for(let y=by0; y<by1; y++){ const rij = (r.y0+y)*W + r.x0; for(let x=bx0; x<bx1; x++){ const g = samenIdx[rij+x], n = tel[g]; if(n > bestN || (n===bestN && g===midden)){ bestN = n; best = g; } tel[g] = 0; } }
+      uit[oy*uw+ox] = best;
+    }
+    if(voortgang && (oy&127)===127){ await voortgang(oy/uh); if(geannuleerd && geannuleerd()) return null; }
+  }
+  return {w:uw, h:uh, idx:uit};
+}
+function paneelIndeling(uw, pxcmX, paneelCm, overlapCm){
+  const P = Math.max(1, Math.round(paneelCm*pxcmX)), O = Math.min(P-1, Math.max(0, Math.round(overlapCm*pxcmX)));
+  const panelen = []; let x0 = 0;
+  for(;;){ const x1 = Math.min(uw, x0+P); panelen.push({x0, x1}); if(x1 >= uw || panelen.length >= 999) break; x0 += P - O; }
+  return {panelen, P, O};
+}
+function panelenCsv(naam, panelen, pxcmX, overlapCm){
+  const regels = ['nummer;van_px;tot_px;breedte_px;van_cm;tot_cm;breedte_cm;overlap_cm'];
+  panelen.forEach((p, i)=>regels.push([i+1, p.x0, p.x1, p.x1-p.x0, nlGetal(p.x0/pxcmX, 2), nlGetal(p.x1/pxcmX, 2), nlGetal((p.x1-p.x0)/pxcmX, 2), nlGetal(overlapCm, 2)].join(';')));
+  return {naam:naam+'_panelen.csv', data:new TextEncoder().encode('\uFEFF'+regels.join('\r\n')+'\r\n'), comprimeer:true};
+}
+function getouwMogelijk(formaat, wat){ return (wat==='kleed' || wat==='selectie') && (formaat==='pngidx' || formaat==='pngrgb' || formaat==='bmp'); }
+async function exportGetouw(o, r, naam, voortgang, geannuleerd){
+  const pxcmX = o.dichtheidAan ? o.pxcmX : doc.pxcm, pxcmY = o.dichtheidAan ? o.pxcmY : doc.pxcm;
+  const blok = (o.formaat==='pngrgb' && o.maat===true) ? o.blok : 1, ext = o.formaat==='bmp' ? 'bmp' : 'png', sel = o.wat==='selectie' ? '_sel' : '';
+  const maat = o.dichtheidAan ? dichtheidMaat(r, pxcmX, pxcmY) : {w:r.w, h:r.h};
+  if(maat.w*blok*maat.h*blok > MAX_PX) throw new Error('Te groot: '+(maat.w*blok)+' × '+(maat.h*blok)+' pixels (maximaal 16 miljoen).');
+  let bron = null;
+  if(o.dichtheidAan){ bron = await herbemonster(r, pxcmX, pxcmY, o.methode, async f=>voortgang(0.5*f), geannuleerd); if(!bron) return null; }
+  else verzekerComposiet();
+  const rijVan = (x0, x1)=> bron
+    ? (y, uit)=>uit.set(bron.idx.subarray(y*bron.w + x0, y*bron.w + x1))
+    : (y, uit)=>uit.set(samenIdx.subarray((r.y0+y)*doc.w + r.x0 + x0, (r.y0+y)*doc.w + r.x0 + x1));
+  const maakBestand = (x0, x1, titel, vg)=>{
+    const w = x1-x0, h = maat.h, rij = rijVan(x0, x1), extra = o.dichtheidAan ? {pxcmX, pxcmY, methode:o.methode} : {};
+    if(o.formaat==='pngidx') return maakPngIndex({w, h, palet:doc.palet, transparant:null, pxcm:pxcmX, pxcmY, naam:titel, rij, voortgang:vg, geannuleerd, extra});
+    if(o.formaat==='bmp') return maakBmp({w, h, palet:doc.palet, pxcm:pxcmX, pxcmY, rij, voortgang:vg, geannuleerd});
+    return pngRgbVanRijen(w, h, blok, rij);
+  };
+  if(!o.panelenAan){
+    const blob = await maakBestand(0, maat.w, naam, async f=>voortgang(0.5+0.5*f));
+    if(!blob) return null;
+    return {blob, naam:naam+sel+'_'+(maat.w*blok)+'x'+(maat.h*blok)+'.'+ext};
+  }
+  const {panelen} = paneelIndeling(maat.w, pxcmX, o.paneelCm, o.overlapCm), bestanden = [];
+  for(let i=0;i<panelen.length;i++){
+    const p = panelen[i];
+    const blob = await maakBestand(p.x0, p.x1, naam+' paneel '+tweeCijfers(i+1), async f=>voortgang(0.5+0.5*(i+f)/panelen.length));
+    if(!blob) return null;
+    bestanden.push({naam:naam+sel+'_paneel'+tweeCijfers(i+1)+'_'+((p.x1-p.x0)*blok)+'x'+(maat.h*blok)+'.'+ext, data:blob});
+  }
+  const getouw = {pxcmX, pxcmY, methode:o.dichtheidAan ? o.methode : 'origineel', w:maat.w, h:maat.h, paneel_cm:o.paneelCm, overlap_cm:o.overlapCm,
+    panelen: panelen.map((p, i)=>({nummer:i+1, van_px:p.x0, tot_px:p.x1, breedte_px:p.x1-p.x0, van_cm:Math.round(p.x0/pxcmX*100)/100, tot_cm:Math.round(p.x1/pxcmX*100)/100}))};
+  bestanden.push(...garenlijstBestanden(naam, r, garenTelling(r), getouw), panelenCsv(naam, panelen, pxcmX, o.overlapCm));
+  return {blob: await maakZip(bestanden), naam:naam+sel+'_panelen.zip'};
+}
+
 const EXPORT_FORMATEN = [
   {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'garennummers en maat in cm zitten in het bestand; per laag of per garen doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
   {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
@@ -5074,7 +5163,8 @@ const EXPORT_FORMATEN = [
   {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
 ];
 const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag'],['garen','per garen']];
-const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, schaal:1, naam:'', garenZwart:false, metDoek:false, svgDoek:true};
+const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, schaal:1, naam:'', garenZwart:false, metDoek:false, svgDoek:true,
+                     dichtheidAan:false, pxcmX:0, pxcmY:0, methode:'naaste', panelenAan:false, paneelCm:140, overlapCm:2};
 let exportTaak = null;      // {geannuleerd, blob, naam}
 
 async function exportMaak(o, voortgang, geannuleerd){
@@ -5085,6 +5175,7 @@ async function exportMaak(o, voortgang, geannuleerd){
   }
   if(o.formaat==='reserve') return maakReservekopie(voortgang, geannuleerd);
   const r = exportRect(o.wat), blok = o.maat===true ? o.blok : 1;
+  if(getouwMogelijk(o.formaat, o.wat) && (o.dichtheidAan || o.panelenAan)) return exportGetouw(o, r, naam, voortgang, geannuleerd);
   if(r.w*blok*r.h*blok > MAX_PX) throw new Error('Te groot: '+(r.w*blok)+' × '+(r.h*blok)+' pixels. Kies kleinere blokken (maximaal 16 miljoen pixels).');
   if(o.formaat==='svg'){
     const tel = garenTelling(r), enc = new TextEncoder(), w = doc.w;
@@ -5232,12 +5323,23 @@ function exportDialoog(){
   optieRij.style.flexWrap = 'wrap';
   const naamRij = maak('div', 'rij'); const naamIn = maak('input'); naamIn.type = 'text'; naamIn.value = exportKeuze.naam; naamIn.style.flex = '1';
   naamRij.append(maak('span', 'rijlabel', 'naam'), naamIn);
+  if(!exportKeuze.pxcmX){ exportKeuze.pxcmX = doc.pxcm; exportKeuze.pxcmY = doc.pxcm; }
+  const getouwKop = maak('div', 'sectiekop', 'voor het getouw');
+  const getalIn = (v, min, max, stap, breedte)=>{ const i = maak('input'); i.type = 'number'; i.min = min; i.max = max; i.step = stap; i.value = v; i.style.width = breedte; return i; };
+  const dichtRij = maak('div', 'rij'), dichtSeg = maak('div', 'seg klein'), dichtVak = maak('span'), methSeg = maak('div', 'seg klein');
+  const pxXIn = getalIn(exportKeuze.pxcmX, 1, 100, 0.5, '64px'), pxYIn = getalIn(exportKeuze.pxcmY, 1, 100, 0.5, '64px');
+  dichtVak.append(pxXIn, document.createTextNode(' × '), pxYIn, document.createTextNode(' per cm '));
+  dichtRij.append(maak('span', 'rijlabel', 'dichtheid'), dichtSeg, dichtVak, methSeg); dichtRij.style.flexWrap = 'wrap';
+  const paneelRij = maak('div', 'rij'), paneelSeg = maak('div', 'seg klein'), paneelVak = maak('span');
+  const paneelIn = getalIn(exportKeuze.paneelCm, 5, 1000, 1, '64px'), overlapIn = getalIn(exportKeuze.overlapCm, 0, 100, 0.5, '56px');
+  paneelVak.append(paneelIn, document.createTextNode(' cm, overlap '), overlapIn, document.createTextNode(' cm'));
+  paneelRij.append(maak('span', 'rijlabel', 'panelen'), paneelSeg, paneelVak); paneelRij.style.flexWrap = 'wrap';
   const info = maak('div', 'uitleg');
   let telKleed = null;      // garentelling van het hele kleed, één keer per dialoog
   const voortgang = maak('div', 'voortgang'); voortgang.hidden = true; const balk = maak('i'); voortgang.appendChild(balk);
   const status = maak('div', 'uitleg'); status.hidden = true;
   const knoppen = maak('div', 'dialoogknoppen');
-  vak.append(watRij, maak('div','sectiekop','formaat'), formSeg, maatRij, optieRij, naamRij, info, voortgang, status, knoppen);
+  vak.append(watRij, maak('div','sectiekop','formaat'), formSeg, maatRij, optieRij, getouwKop, dichtRij, paneelRij, naamRij, info, voortgang, status, knoppen);
 
   const formaat = ()=>EXPORT_FORMATEN.find(f=>f.id===exportKeuze.formaat) || EXPORT_FORMATEN[0];
   const bouw = ()=>{
@@ -5299,6 +5401,28 @@ function exportDialoog(){
         optieSeg2.appendChild(b);
       });
     }
+    const getouw = getouwMogelijk(f.id, exportKeuze.wat);
+    getouwKop.style.display = dichtRij.style.display = paneelRij.style.display = getouw ? '' : 'none';
+    dichtSeg.innerHTML = ''; methSeg.innerHTML = ''; paneelSeg.innerHTML = '';
+    if(getouw){
+      [[false,'zoals het ontwerp'],[true,'anders']].forEach(([v, tekst])=>{
+        const b = maak('button', v===exportKeuze.dichtheidAan ? 'actief' : '', tekst);
+        b.addEventListener('click', ()=>{ exportKeuze.dichtheidAan = v; bouw(); });
+        dichtSeg.appendChild(b);
+      });
+      dichtVak.style.display = methSeg.style.display = exportKeuze.dichtheidAan ? '' : 'none';
+      [['naaste','naaste buur'],['meerderheid','meerderheid per blok']].forEach(([v, tekst])=>{
+        const b = maak('button', v===exportKeuze.methode ? 'actief' : '', tekst);
+        b.addEventListener('click', ()=>{ exportKeuze.methode = v; bouw(); });
+        methSeg.appendChild(b);
+      });
+      [[false,'heel'],[true,'stroken van']].forEach(([v, tekst])=>{
+        const b = maak('button', v===exportKeuze.panelenAan ? 'actief' : '', tekst);
+        b.addEventListener('click', ()=>{ exportKeuze.panelenAan = v; bouw(); });
+        paneelSeg.appendChild(b);
+      });
+      paneelVak.style.display = exportKeuze.panelenAan ? '' : 'none';
+    }
     const r = exportRect(exportKeuze.wat), blok = f.maat===true ? exportKeuze.blok : 1;
     let tekst = '';
     if(f.id==='project') tekst = 'Het hele kleed met lagen, garens en verlopen, als .weefstudio.json.';
@@ -5320,12 +5444,26 @@ function exportDialoog(){
         if(r.w*r.h > SVG_WAARSCHUW_PX) tekst += ' — let op: boven 4 miljoen rasterpunten kan het bestand tientallen MB worden; een selectie is handiger';
       }
       if(uitW*uitH > MAX_PX) tekst += ' — te groot, kies kleinere blokken';
-      if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' garens, '+nlGetal(doc.pxcm,0)+' per cm in het bestand';
-      if(f.id==='bmp') tekst += ' · '+maatTekstBestand(bmpGrootte(r.w, r.h, doc.palet.length));
+      if(getouw && exportKeuze.dichtheidAan){
+        const m = dichtheidMaat(r, exportKeuze.pxcmX, exportKeuze.pxcmY);
+        tekst = (m.w*blok)+' × '+(m.h*blok)+' pixels op '+nlGetal(exportKeuze.pxcmX,1)+' × '+nlGetal(exportKeuze.pxcmY,1)+' per cm ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm, '+(exportKeuze.methode==='meerderheid' ? 'meerderheid per blok' : 'naaste buur')+')';
+        if(m.w*blok*m.h*blok > MAX_PX) tekst += ' — te groot';
+      }
+      if(getouw && exportKeuze.panelenAan){
+        const pxX = exportKeuze.dichtheidAan ? exportKeuze.pxcmX : doc.pxcm, uw = exportKeuze.dichtheidAan ? dichtheidMaat(r, exportKeuze.pxcmX, exportKeuze.pxcmY).w : r.w;
+        const {panelen} = paneelIndeling(uw, pxX, exportKeuze.paneelCm, exportKeuze.overlapCm);
+        tekst += ' · '+panelen.length+(panelen.length===1 ? ' strook' : ' stroken')+' in een zip: '+panelen.map(p=>nlGetal((p.x1-p.x0)/pxX,1)).join(' / ')+' cm breed, snijlijnen in de garenlijst';
+      }
+      if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' garens, '+(getouw && exportKeuze.dichtheidAan ? nlGetal(exportKeuze.pxcmX,1)+' × '+nlGetal(exportKeuze.pxcmY,1) : nlGetal(doc.pxcm,0))+' per cm in het bestand';
+      if(f.id==='bmp' && !(getouw && exportKeuze.panelenAan)){ const bm = (getouw && exportKeuze.dichtheidAan) ? dichtheidMaat(r, exportKeuze.pxcmX, exportKeuze.pxcmY) : r; tekst += ' · '+maatTekstBestand(bmpGrootte(bm.w, bm.h, doc.palet.length)); }
     }
     info.textContent = tekst;
   };
   blokIn.addEventListener('change', ()=>{ exportKeuze.blok = klem(+blokIn.value||2, 2, 16); blokIn.value = exportKeuze.blok; bouw(); });
+  pxXIn.addEventListener('change', ()=>{ exportKeuze.pxcmX = klem(+pxXIn.value||doc.pxcm, 1, 100); pxXIn.value = exportKeuze.pxcmX; bouw(); });
+  pxYIn.addEventListener('change', ()=>{ exportKeuze.pxcmY = klem(+pxYIn.value||doc.pxcm, 1, 100); pxYIn.value = exportKeuze.pxcmY; bouw(); });
+  paneelIn.addEventListener('change', ()=>{ exportKeuze.paneelCm = klem(+paneelIn.value||140, 5, 1000); paneelIn.value = exportKeuze.paneelCm; bouw(); });
+  overlapIn.addEventListener('change', ()=>{ exportKeuze.overlapCm = klem(+overlapIn.value||0, 0, 100); overlapIn.value = exportKeuze.overlapCm; bouw(); });
   naamIn.addEventListener('input', ()=>{ exportKeuze.naam = naamIn.value; });
 
   const zetKnoppen = (fase)=>{
@@ -5712,6 +5850,48 @@ async function zelftest(){
       if(!pdfPaginaMaat({w:9000, h:9000}, 1).teGroot || pdfPaginaMaat({w:9000, h:9000}, 2).teGroot) return 'grens';
       if(pdfTekst('a(b)c\\d\u00e9\u2014')!=='(a\\(b\\)c\\\\d\u00e9?)') return 'escapes: '+pdfTekst('a(b)c\\d\u00e9\u2014');
       return r.naam==='zt_64x48_1op10.pdf';
+    });
+    await test('Andere dichtheid, naaste buur: 7 × 7 per cm = elk tweede punt; 14 × 7 ongelijk met pHYs x/y', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'pngidx', naam:'zt', dichtheidAan:true, pxcmX:7, pxcmY:7, methode:'naaste', panelenAan:false}, niets, nooit);
+      const info = leesPng(await blobNaarBytes(r.blob)), idx = await pngIndices(info);
+      if(info.w!==32 || info.h!==24 || r.naam!=='zt_32x24.png') return 'maat '+info.w+'x'+info.h+' '+r.naam;
+      for(let oy=0;oy<24;oy++) for(let ox=0;ox<32;ox++) if(idx[oy*32+ox]!==samenIdx[(2*oy+1)*64 + 2*ox+1]) return 'afwijking bij '+ox+','+oy;
+      if(info.pxcm!==7 || info.pxcmY!==7 || !info.ws || info.ws.pxcmX!==7) return 'dichtheid in het bestand';
+      const r2 = await exportMaak({wat:'kleed', formaat:'pngidx', naam:'zt', dichtheidAan:true, pxcmX:14, pxcmY:7, methode:'naaste', panelenAan:false}, niets, nooit);
+      const i2 = leesPng(await blobNaarBytes(r2.blob)), idx2 = await pngIndices(i2);
+      if(i2.w!==64 || i2.h!==24 || i2.pxcm!==14 || i2.pxcmY!==7) return 'ongelijk: '+i2.w+'x'+i2.h+' '+i2.pxcm+'/'+i2.pxcmY;
+      for(let oy=0;oy<24;oy++) for(let ox=0;ox<64;ox++) if(idx2[oy*64+ox]!==samenIdx[(2*oy+1)*64 + ox]) return 'ongelijk: afwijking bij '+ox+','+oy;
+      const r3 = await exportMaak({wat:'kleed', formaat:'bmp', naam:'zt', dichtheidAan:true, pxcmX:7, pxcmY:14, methode:'naaste', panelenAan:false}, niets, nooit);
+      const b3 = leesBmp(await blobNaarBytes(r3.blob)), dv = new DataView((await blobNaarBytes(r3.blob)).buffer);
+      return b3.info.w===32 && b3.info.h===48 && dv.getInt32(38, true)===700 && dv.getInt32(42, true)===1400;
+    });
+    await test('Andere dichtheid, meerderheid per blok: klopt met een onafhankelijke telling, gelijkspel = midden', async ()=>{
+      const uit = await herbemonster({x0:0, y0:0, w:64, h:48}, 7, 7, 'meerderheid');
+      if(uit.w!==32 || uit.h!==24) return 'maat';
+      for(let oy=0;oy<24;oy++) for(let ox=0;ox<32;ox++){
+        const n = {}; for(let y=2*oy;y<2*oy+2;y++) for(let x=2*ox;x<2*ox+2;x++){ const g = samenIdx[y*64+x]; n[g] = (n[g]||0)+1; }
+        const max = Math.max(...Object.values(n)), kand = Object.keys(n).filter(g=>n[g]===max).map(Number), midden = samenIdx[(2*oy+1)*64+2*ox+1];
+        const v = uit.idx[oy*32+ox];
+        if(!kand.includes(v) || (kand.includes(midden) && v!==midden)) return 'afwijking bij '+ox+','+oy+': '+v+' uit '+kand.join('/')+' (midden '+midden+')';
+      }
+      const op = await herbemonster({x0:0, y0:0, w:64, h:48}, 28, 28, 'meerderheid');     // vergroten: blok < 1 bronpunt → naaste buur
+      return op.w===128 && op.h===96 && op.idx[5*128+7]===samenIdx[2*64+3];
+    });
+    await test('Panelen: 2 cm met 0,5 cm overlap → 3 stroken, snijlijnen in CSV en JSON', async ()=>{
+      const ind = paneelIndeling(64, 14, 2, 0.5);
+      if(JSON.stringify(ind.panelen)!==JSON.stringify([{x0:0,x1:28},{x0:21,x1:49},{x0:42,x1:64}])) return 'indeling '+JSON.stringify(ind.panelen);
+      if(paneelIndeling(20, 14, 2, 0.5).panelen.length!==1 || paneelIndeling(64, 14, 1, 5).O!==13) return 'randgevallen';
+      const r = await exportMaak({wat:'kleed', formaat:'bmp', naam:'zt', dichtheidAan:false, panelenAan:true, paneelCm:2, overlapCm:0.5}, niets, nooit);
+      const items = await leesZip(await blobNaarBytes(r.blob)), dec = new TextDecoder();
+      const namen = items.map(i=>i.naam);
+      if(items.length!==7 || namen[1]!=='zt_paneel02_28x48.bmp' || namen[2]!=='zt_paneel03_22x48.bmp' || namen[6]!=='zt_panelen.csv' || r.naam!=='zt_panelen.zip') return 'zip '+namen.join(',');
+      const b = leesBmp(items[1].inhoud);
+      if(!b || b.info.w!==28) return 'paneel 2';
+      for(let y=0;y<48;y++) for(let x=0;x<28;x++) if(b.idx[y*28+x]!==samenIdx[y*64+21+x]) return 'paneel 2 afwijking bij '+x+','+y;
+      const csv = dec.decode(items[6].inhoud).replace(/^\uFEFF/, '').trim().split('\r\n');
+      if(csv.length!==4 || csv[2]!=='2;21;49;28;1,50;3,50;2,00;0,50') return 'csv '+csv[2];
+      const json = JSON.parse(dec.decode(items[4].inhoud));
+      return json.getouw && json.getouw.panelen.length===3 && json.getouw.panelen[2].tot_px===64 && json.getouw.paneel_cm===2;
     });
     await test('Import geïndexeerde PNG als laag: garens op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
