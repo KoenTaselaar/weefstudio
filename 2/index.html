@@ -241,6 +241,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
 <body>
 <svg id="iconen" xmlns="http://www.w3.org/2000/svg" style="display:none">
   <symbol id="i-galerij" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-tekst" viewBox="0 0 24 24"><path d="M5 7V4h14v3M12 4v16M9 20h6"/></symbol>
   <symbol id="i-acties" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.1 5.1L4 17l3 3 5.6-5.6a4 4 0 0 0 5.1-5.1l-2.5 2.5-2.1-.6-.6-2.1z"/></symbol>
   <symbol id="i-selectie" viewBox="0 0 24 24"><path d="M5 5h3M11 5h3M17 5h2v2M19 11v3M19 17v2h-2M14 19h-3M8 19H5v-2M5 14v-3M5 8V5" stroke-dasharray="0"/><path d="M14 11l-3 6-1.5-2.5L7 13z" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-transformeer" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/><circle cx="6" cy="6" r="1.8" fill="currentColor" stroke="none"/><circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.8" fill="currentColor" stroke="none"/><circle cx="18" cy="18" r="1.8" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3"/></symbol>
@@ -312,6 +313,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
       <button class="tb" id="kActies" data-paneel="acties" title="Acties"><svg class="ic"><use href="#i-acties"/></svg></button>
       <button class="tb" id="kSelectie" data-tool="selectie" title="Selectie (S)"><svg class="ic"><use href="#i-selectie"/></svg></button>
       <button class="tb" id="kTransformeer" data-tool="transformeer" title="Transformeer (V)"><svg class="ic"><use href="#i-transformeer"/></svg></button>
+      <button class="tb" id="kTekst" title="Tekst (T)"><svg class="ic"><use href="#i-tekst"/></svg></button>
       <button class="tb" id="kRaster" title="pixelraster aan/uit (36 dpi)"><svg class="ic"><use href="#i-raster"/></svg></button>
     </div>
     <div class="groep midden"><button class="plat" id="docTitel" title="naam wijzigen"></button></div>
@@ -473,6 +475,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         <button class="knop breed" id="kImpRef"><svg class="ic"><use href="#i-import"/></svg> Afbeelding als referentie</button>
         <button class="knop breed" id="kImpProject"><svg class="ic"><use href="#i-import"/></svg> Projectbestand openen</button>
         <button class="knop breed" id="kPlakken"><svg class="ic"><use href="#i-plak"/></svg> Plakken</button>
+        <button class="knop breed" id="kTekstToevoegen"><svg class="ic"><use href="#i-tekst"/></svg> Tekst…</button>
         <div class="uitleg">Een afbeelding als laag krijgt de garens van dit kleed (dichtstbijzijnde kleur). Een referentie ligt los over het doek om na te tekenen en wordt niet geëxporteerd.</div>
       </div>
       <div class="tab" data-tab="doek">
@@ -515,6 +518,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
           <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
           <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per garen" geeft per gebruikt garen een doorzichtige PNG (in garenkleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de garenlijst: per garen punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren. SVG geeft per garen een vectorpad dat de rasterpunten exact volgt, met de maat in mm: voor vinyl- en lasersnijden, plotters en drukwerk op elke grootte. PDF op ware grootte (of 1:2, 1:5, 1:10) is om te printen bij een copyshop of op een plotter; het palet en de garennummers zitten erin, de blokken blijven scherp.</p>
+          <p>Tekst (de T in de bovenbalk, of Acties › Toevoegen › Tekst…): typ een tekst, kies een lettertype van het apparaat of laad een eigen lettertype (ttf, otf, woff; het wordt bewaard), zet de hoogte in rasterpunten en de dikte (dun, normaal, dik). De letters worden hard afgekapt tot rasterpunten in het actieve garen en komen als eigen laag zwevend op het doek: verplaats, schaal of draai, dan Klaar.</p>
           <p>Voor het getouw (bij PNG en BMP van het hele kleed of een selectie): "dichtheid anders" rekent het ontwerp om naar een andere dichtheid, ook ongelijk in breedte en hoogte (bijvoorbeeld 14 × 12 per cm), met naaste buur of de meerderheid per blok. "Stroken" deelt een breed kleed op in panelen van hooguit zoveel cm met overlap, elk een eigen bestand; de snijlijnen staan in panelen.csv en in de garenlijst. Dit is rekenwerk op rasterpunten, geen weefsimulatie.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
@@ -546,7 +550,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
   <div id="dialoog"><div id="dialoogVenster" role="dialog"></div></div>
   <div id="toast"></div>
   <div id="pipetFlits"></div>
-  <input type="file" id="bestandInvoer" accept="image/png,image/gif,image/bmp,image/jpeg,image/webp,application/json,.json" style="display:none">
+  <input type="file" id="bestandInvoer" accept="image/png,image/gif,image/bmp,image/jpeg,image/webp,application/json,.json,.bmp" style="display:none">
 </div>
 
 <script>
@@ -558,7 +562,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.11';
+const APP_VERSIE = '2.12';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -1716,6 +1720,14 @@ function vulGeheugenBewaar(kleuren, m, bb){
   while(doc.vullingen.length > VULGEHEUGEN_MAX) doc.vullingen.shift();
 }
 function vulGeheugenVergeet(L){ if(doc.vullingen) doc.vullingen = doc.vullingen.filter(v=>v.laag!==L.id); }
+function vulGeheugenErf(N, bronnen){
+  if(!doc.vullingen || !doc.vullingen.length) return;
+  const ids = new Set(bronnen.map(l=>l.id));
+  const erf = doc.vullingen.filter(v=>ids.has(v.laag)).map(v=>Object.assign({}, v, {laag:N.id}));
+  if(!erf.length) return;
+  doc.vullingen.push(...erf);
+  while(doc.vullingen.length > VULGEHEUGEN_MAX) doc.vullingen.shift();
+}
 function vulRegio(x, y, o){
   const R = doc.refLaag ? doc.lagen.find(l=>l.id===doc.refLaag) : null;
   if(R){ const r = vulMaskerMet(R.data, x, y); if(r) r.ref = true; return r; }
@@ -2990,6 +3002,7 @@ document.addEventListener('keydown', e=>{
     case 'v': zetTool('transformeer'); break;
     case 'i': zetTool('pipet'); break;
     case 'h': zetTool('hand'); break;
+    case 't': tekstDialoog(); break;
     case 'l': paneelToggle('lagen'); break;
     case 'c': paneelToggle('kleur'); break;
     case '[': zetMaat(maatStap(inst.maat, -1)); break;
@@ -3486,6 +3499,7 @@ function laagDupliceer(){
   const L = actieveLaag();
   const K = nieuweLaag(L.naam+' kopie', doc.w, doc.h, L.data.slice());
   K.dek = L.dek; K.zicht = L.zicht; K.slot = L.slot;
+  vulGeheugenErf(K, [L]);                       // de kopie kent dezelfde verloop- en glittervlakken
   lagenActie(()=>{ doc.lagen.splice(doc.actief+1, 0, K); doc.actief++; }, K.data.length);
 }
 async function laagWeg(){
@@ -3519,6 +3533,7 @@ function laagMerge(){
   const N = nieuweLaag(O.naam, w, doc.h, data);
   N.zicht = true; N.dek = 64; N.slot = O.slot;
   if(doc.refLaag===O.id || doc.refLaag===B.id) doc.refLaag = N.id;
+  vulGeheugenErf(N, [O, B]);                    // anders pakt het emmertje na samenvoegen weer één band
   lagenActie(()=>{ doc.lagen.splice(doc.actief-1, 2, N); doc.actief--; }, 3*n);   // twee oude lagen + de nieuwe blijven in leven
 }
 function laagSpiegel(h){
@@ -4059,6 +4074,183 @@ function patroonDialoog(){
   }}], afronden);
 }
 
+const TEKST_FONTS = [
+  ['Helvetica Neue','Helvetica'], ['Arial Black','Arial Black'], ['Futura','Futura'], ['Avenir Next','Avenir'],
+  ['Gill Sans','Gill Sans'], ['Optima','Optima'], ['Georgia','Georgia'], ['Times New Roman','Times'],
+  ['Didot','Didot'], ['Baskerville','Baskerville'], ['Courier New','Courier'], ['Menlo','Menlo'],
+  ['American Typewriter','Typewriter'], ['Copperplate','Copperplate'], ['Marker Felt','Marker Felt'], ['Chalkboard SE','Chalkboard'],
+];
+const TEKST_STANDAARD = {tekst:'', font:'Helvetica Neue', px:0, vet:false, cursief:false, spatie:0, regel:1.15, uitlijn:'links', drempel:50};
+let tekstInst = Object.assign({}, TEKST_STANDAARD);
+try{ const o = JSON.parse(localStorage.getItem('ws2_tekst') || '{}'); for(const k in TEKST_STANDAARD) if(k in o) tekstInst[k] = o[k]; }catch(e){}
+function tekstBewaarInst(){ try{ localStorage.setItem('ws2_tekst', JSON.stringify(tekstInst)); }catch(e){} }
+
+let eigenFonts = [], fontsBelofte = null;          // [{naam, familie}]
+async function fontActiveer(familie, bytes){ const ff = new FontFace(familie, bytes); await ff.load(); document.fonts.add(ff); }
+function fontsKlaar(){
+  if(!fontsBelofte) fontsBelofte = (async ()=>{
+    try{
+      const lijst = (await dbDoe('meta', 'readonly', s=>s.get('fonts'))) || [];
+      for(const f of lijst){ try{ await fontActiveer(f.familie, f.bytes); eigenFonts.push({naam:f.naam, familie:f.familie}); }catch(e){} }
+    }catch(e){}
+  })();
+  return fontsBelofte;
+}
+async function laadFontBestand(f){
+  try{
+    const bytes = await f.arrayBuffer();
+    const naam = f.name.replace(/\.[^.]+$/, ''), familie = 'eigen-'+naam.replace(/[^\w-]+/g, '_');
+    await fontActiveer(familie, bytes);
+    await fontsKlaar();
+    eigenFonts = eigenFonts.filter(x=>x.familie!==familie).concat([{naam, familie}]);
+    const lijst = ((await dbDoe('meta', 'readonly', s=>s.get('fonts'))) || []).filter(x=>x.familie!==familie);
+    lijst.push({naam, familie, bytes});
+    await dbDoe('meta', 'readwrite', s=>s.put(lijst, 'fonts'));
+    tekstInst.font = familie; tekstBewaarInst();
+    toast('Lettertype "'+naam+'" geladen');
+    if(el('dialoog').classList.contains('open')) tekstDialoog();
+  }catch(e){ toast('Dit bestand is geen bruikbaar lettertype (ttf, otf, woff)'); }
+}
+async function vergeetFont(familie){
+  eigenFonts = eigenFonts.filter(x=>x.familie!==familie);
+  try{ const lijst = ((await dbDoe('meta', 'readonly', s=>s.get('fonts'))) || []).filter(x=>x.familie!==familie); await dbDoe('meta', 'readwrite', s=>s.put(lijst, 'fonts')); }catch(e){}
+  if(tekstInst.font===familie) tekstInst.font = TEKST_FONTS[0][0];
+}
+
+function tekstBitmap(o){
+  const regelsT = String(o.tekst||'').replace(/\r/g, '').split('\n');
+  const px = klem(Math.round(o.px)||10, 4, 2000);
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const fontStr = (o.cursief ? 'italic ' : '')+(o.vet ? 'bold ' : '')+px+'px "'+String(o.font).replace(/"/g, '')+'", sans-serif';
+  const spatiePx = Math.round((o.spatie||0)*px/100);
+  const zetFont = ()=>{ g.font = fontStr; g.textBaseline = 'alphabetic'; if('letterSpacing' in g) g.letterSpacing = spatiePx+'px'; };
+  zetFont();
+  const m0 = g.measureText('Hg');
+  const asc = Math.ceil(m0.fontBoundingBoxAscent || m0.actualBoundingBoxAscent || px*0.8);
+  const desc = Math.ceil(m0.fontBoundingBoxDescent || m0.actualBoundingBoxDescent || px*0.25);
+  const breedtes = regelsT.map(r=>g.measureText(r).width + Math.abs(spatiePx)*r.length);
+  const marge = Math.ceil(px*0.35), lh = Math.max(1, Math.round(px*(o.regel||1.15)));
+  const w = Math.ceil(Math.max(1, ...breedtes)) + 2*marge, h = asc + desc + lh*(regelsT.length-1) + 2*marge;
+  if(w*h > 12e6) throw new Error('Te groot: '+w+' × '+h+' punten. Kies een kleinere letter of kortere regels.');
+  c.width = w; c.height = h; zetFont(); g.fillStyle = '#000';
+  regelsT.forEach((r, i)=>{
+    const bw = g.measureText(r).width;
+    const x = o.uitlijn==='midden' ? (w-bw)/2 : o.uitlijn==='rechts' ? w-marge-bw : marge;
+    g.fillText(r, x, marge + asc + i*lh);
+  });
+  const D = g.getImageData(0, 0, w, h).data, drempel = Math.round(255*klem(o.drempel||50, 5, 95)/100);
+  const bb = bboxUit(), bits = new Uint8Array(w*h);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ if(D[(y*w+x)*4+3] >= drempel){ bits[y*w+x] = 1; bboxVoeg(bb, x, y); } }
+  c.width = 1; c.height = 1;
+  if(!bb.actief) return null;
+  const bw = bb.x1-bb.x0+1, bh = bb.y1-bb.y0+1, uit = new Uint8Array(bw*bh);
+  for(let y=0;y<bh;y++) uit.set(bits.subarray((bb.y0+y)*w + bb.x0, (bb.y0+y)*w + bb.x0 + bw), y*bw);
+  return {w:bw, h:bh, bits:uit};
+}
+function tekstPlaats(bm){
+  if(doc.lagen.length >= maxLagen()){ toast('Maximaal '+maxLagen()+' lagen bij dit formaat'); return false; }
+  if(bm.w > doc.w || bm.h > doc.h){ toast('De tekst is groter dan het kleed: kies een kleinere letter'); return false; }
+  if(zwevend) transformKlaar(false);
+  const z = zichtbareRect();
+  const ox = klem(Math.round((z.x0+z.x1)/2 - bm.w/2), 0, doc.w-bm.w), oy = klem(Math.round((z.y0+z.y1)/2 - bm.h/2), 0, doc.h-bm.h);
+  const L = nieuweLaag('tekst', doc.w, doc.h), m = new Uint8Array(doc.w*doc.h), k = doc.kleur;
+  for(let y=0;y<bm.h;y++){
+    const rij = (oy+y)*doc.w + ox, br = y*bm.w;
+    for(let x=0;x<bm.w;x++) if(bm.bits[br+x]){ L.data[rij+x] = k; m[rij+x] = 1; }
+  }
+  metUndoGroep(()=>{
+    lagenActie(()=>{ doc.lagen.splice(doc.actief+1, 0, L); doc.actief++; }, L.data.length);
+    selZet(m);
+  });
+  zetTool('transformeer');
+  toast('Tekst staat op een eigen laag — verplaats, schaal of draai, dan Klaar');
+  return true;
+}
+
+async function tekstDialoog(){
+  if(!doc) return;
+  rondAf();
+  await fontsKlaar();
+  const o = tekstInst;
+  if(!o.px) o.px = Math.round(doc.pxcm*3);
+  const vak = maak('div');
+  const ta = maak('textarea'); ta.value = o.tekst; ta.rows = 2; ta.placeholder = 'typ hier…';
+  ta.style.cssText = 'width:100%;box-sizing:border-box;font-size:17px;resize:vertical;margin-bottom:6px';
+  vak.appendChild(ta);
+  const getal = (v, min, max, stap, breedte)=>{ const i = maak('input'); i.type = 'number'; i.min = min; i.max = max; i.step = stap; i.value = v; i.style.width = breedte; return i; };
+  const fontRij = maak('div', 'rij'), sel = maak('select'); sel.style.flex = '1'; sel.style.minWidth = '0';
+  const vulFonts = ()=>{
+    sel.innerHTML = '';
+    if(eigenFonts.length){ const g1 = maak('optgroup'); g1.label = 'eigen lettertypen'; eigenFonts.forEach(f=>{ const op = maak('option', '', f.naam); op.value = f.familie; g1.appendChild(op); }); sel.appendChild(g1); }
+    const g2 = maak('optgroup'); g2.label = 'op dit apparaat';
+    TEKST_FONTS.forEach(([fam, naam])=>{ const op = maak('option', '', naam); op.value = fam; g2.appendChild(op); });
+    sel.appendChild(g2);
+    sel.value = o.font;
+    if(sel.value!==o.font){ o.font = TEKST_FONTS[0][0]; sel.value = o.font; }
+  };
+  vulFonts();
+  const laad = maak('button', 'knop', 'eigen…'); laad.title = 'een lettertype laden (ttf, otf, woff)';
+  laad.addEventListener('click', ()=>bestandKies('font'));
+  const weg = maak('button', 'knop', '×'); weg.title = 'dit eigen lettertype vergeten';
+  fontRij.append(maak('span', 'rijlabel', 'letter'), sel, laad, weg);
+  const maatRij = maak('div', 'rij'), pxIn = getal(o.px, 4, 2000, 1, '72px'), maatLabel = maak('span', 'uitleg');
+  maatRij.append(maak('span', 'rijlabel', 'hoogte'), pxIn, maatLabel);
+  const stijlRij = maak('div', 'rij'), stijlSeg = maak('div', 'seg klein'), uitSeg = maak('div', 'seg klein');
+  stijlRij.append(maak('span', 'rijlabel', 'stijl'), stijlSeg, uitSeg); stijlRij.style.flexWrap = 'wrap';
+  const fijnRij = maak('div', 'rij'), spatieIn = getal(o.spatie, -20, 60, 1, '60px'), regelIn = getal(o.regel, 0.6, 3, 0.05, '60px'), drempelSeg = maak('div', 'seg klein');
+  const fijnVak = maak('span'); fijnVak.append(document.createTextNode('letters '), spatieIn, document.createTextNode(' % · regels '), regelIn, document.createTextNode(' ×'));
+  fijnRij.append(maak('span', 'rijlabel', 'afstand'), fijnVak, drempelSeg); fijnRij.style.flexWrap = 'wrap';
+  const voorbeeld = maak('canvas');
+  voorbeeld.style.cssText = 'display:block;width:100%;max-height:170px;object-fit:contain;image-rendering:pixelated;background:'+doc.palet[0]+';border-radius:8px;margin-top:6px';
+  const info = maak('div', 'uitleg');
+  vak.append(fontRij, maatRij, stijlRij, fijnRij, voorbeeld, info);
+  let bm = null, timer = null, plaatsKnop = null;
+  const bouwSeg = ()=>{
+    stijlSeg.innerHTML = ''; uitSeg.innerHTML = ''; drempelSeg.innerHTML = '';
+    [['vet','vet'],['cursief','cursief']].forEach(([k, tekst])=>{ const b = maak('button', o[k] ? 'actief' : '', tekst); b.addEventListener('click', ()=>{ o[k] = !o[k]; bouwSeg(); vernieuw(); }); stijlSeg.appendChild(b); });
+    [['links','links'],['midden','midden'],['rechts','rechts']].forEach(([v, tekst])=>{ const b = maak('button', o.uitlijn===v ? 'actief' : '', tekst); b.addEventListener('click', ()=>{ o.uitlijn = v; bouwSeg(); vernieuw(); }); uitSeg.appendChild(b); });
+    [[65,'dun'],[50,'normaal'],[35,'dik']].forEach(([v, tekst])=>{ const b = maak('button', o.drempel===v ? 'actief' : '', tekst); b.addEventListener('click', ()=>{ o.drempel = v; bouwSeg(); vernieuw(); }); drempelSeg.appendChild(b); });
+    weg.style.display = eigenFonts.some(f=>f.familie===o.font) ? '' : 'none';
+  };
+  const teken = ()=>{
+    if(!bm){ voorbeeld.width = 1; voorbeeld.height = 1; info.textContent = ta.value.trim() ? info.textContent : 'Typ een tekst; hij komt in het actieve garen op een eigen laag.'; if(plaatsKnop) plaatsKnop.disabled = true; return; }
+    voorbeeld.width = bm.w; voorbeeld.height = bm.h;
+    const g = voorbeeld.getContext('2d'), img = g.createImageData(bm.w, bm.h), D = img.data;
+    const [r0,g0,b0] = hexNaarRgb(doc.palet[0]), [r1,g1,b1] = hexNaarRgb(doc.palet[doc.kleur]);
+    for(let i=0;i<bm.w*bm.h;i++){ const j = i*4, aan = bm.bits[i]; D[j] = aan ? r1 : r0; D[j+1] = aan ? g1 : g0; D[j+2] = aan ? b1 : b0; D[j+3] = 255; }
+    g.putImageData(img, 0, 0);
+    const past = bm.w <= doc.w && bm.h <= doc.h;
+    info.textContent = bm.w+' × '+bm.h+' rasterpunten = '+nlGetal(bm.w/doc.pxcm, 1)+' × '+nlGetal(bm.h/doc.pxcm, 1)+' cm'+(past ? '' : ' — groter dan het kleed ('+doc.w+' × '+doc.h+'), kies een kleinere letter');
+    if(plaatsKnop) plaatsKnop.disabled = !past;
+  };
+  const vernieuw = ()=>{
+    clearTimeout(timer);
+    timer = setTimeout(()=>{
+      o.tekst = ta.value;
+      maatLabel.textContent = 'punten = '+nlGetal(o.px/doc.pxcm, 1)+' cm';
+      try{ bm = ta.value.trim() ? tekstBitmap(o) : null; }catch(e){ bm = null; info.textContent = e.message; }
+      teken();
+    }, 120);
+  };
+  ta.addEventListener('input', vernieuw);
+  sel.addEventListener('change', ()=>{ o.font = sel.value; bouwSeg(); vernieuw(); });
+  weg.addEventListener('click', async ()=>{ await vergeetFont(o.font); vulFonts(); bouwSeg(); vernieuw(); });
+  pxIn.addEventListener('change', ()=>{ o.px = klem(+pxIn.value||o.px, 4, 2000); pxIn.value = o.px; vernieuw(); });
+  spatieIn.addEventListener('change', ()=>{ o.spatie = klem(+spatieIn.value||0, -20, 60); spatieIn.value = o.spatie; vernieuw(); });
+  regelIn.addEventListener('change', ()=>{ o.regel = klem(+regelIn.value||1.15, 0.6, 3); regelIn.value = o.regel; vernieuw(); });
+  bouwSeg();
+  dialoogOpen('Tekst', vak, [
+    {tekst:'Annuleer', actie:()=>{ tekstBewaarInst(); }},
+    {tekst:'Plaats', primair:true, actie:()=>{ if(!bm) return false; tekstBewaarInst(); return tekstPlaats(bm) ? undefined : false; }},
+  ]);
+  plaatsKnop = el('dialoogVenster').querySelector('.dialoogknoppen .primair');
+  plaatsKnop.disabled = true;
+  vernieuw();
+  setTimeout(()=>{ ta.focus(); }, 50);
+}
+el('kTekst').addEventListener('click', ()=>{ paneelSluit(); tekstDialoog(); });
+el('kTekstToevoegen').addEventListener('click', ()=>{ paneelSluit(); tekstDialoog(); });
+
 let dbBelofte = null;
 function dbOpen(){
   if(dbBelofte) return dbBelofte;
@@ -4392,9 +4584,11 @@ function projectJson(d){
   });
 }
 let bestandModus = null;
+const BESTAND_ACCEPT = el('bestandInvoer').getAttribute('accept');
 function bestandKies(modus){
   bestandModus = modus;
   const inp = el('bestandInvoer');
+  inp.setAttribute('accept', modus==='font' ? '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2' : BESTAND_ACCEPT);
   inp.value = '';
   inp.click();
 }
@@ -4402,6 +4596,7 @@ el('bestandInvoer').addEventListener('change', ()=>{
   const f = el('bestandInvoer').files[0];
   el('bestandInvoer').value = '';
   if(!f) return;
+  if(bestandModus==='font'){ bestandModus = null; laadFontBestand(f); return; }
   if(f.type==='application/json' || /\.json$/i.test(f.name)){ importProjectBestand(f); return; }
   importGeindexeerd(f).then(gedaan=>{ if(!gedaan) importAfbeeldingBestand(f); }).catch(()=>importAfbeeldingBestand(f));
 });
@@ -5892,6 +6087,52 @@ async function zelftest(){
       if(csv.length!==4 || csv[2]!=='2;21;49;28;1,50;3,50;2,00;0,50') return 'csv '+csv[2];
       const json = JSON.parse(dec.decode(items[4].inhoud));
       return json.getouw && json.getouw.panelen.length===3 && json.getouw.panelen[2].tot_px===64 && json.getouw.paneel_cm===2;
+    });
+    await test('Tekst: bitmap groeit met de hoogte, drempel maakt dikker of dunner, lege tekst = niets', async ()=>{
+      const o = {tekst:'H', font:'Helvetica Neue', px:40, drempel:50, regel:1.15, uitlijn:'links', spatie:0};
+      const H = tekstBitmap(o), H80 = tekstBitmap(Object.assign({}, o, {px:80})), I = tekstBitmap(Object.assign({}, o, {tekst:'I'}));
+      const tel = b=>b.bits.reduce((s,v)=>s+v, 0);
+      if(!H || H.h < 25 || H.h > 45 || H.w >= H.h || I.w >= H.w) return 'maten H '+H.w+'x'+H.h+' I '+I.w+'x'+I.h;
+      if(!(H80.h > H.h*1.7 && H80.h < H.h*2.3 && tel(H80) > tel(H)*3)) return 'schaal '+H80.h+' vs '+H.h;
+      const dun = tekstBitmap(Object.assign({}, o, {tekst:'O', drempel:65})), dik = tekstBitmap(Object.assign({}, o, {tekst:'O', drempel:35}));
+      if(!(tel(dik) > tel(dun))) return 'drempel';
+      const twee = tekstBitmap(Object.assign({}, o, {tekst:'ab\ncd', px:30, regel:1.2}));
+      if(!(twee.h > 40)) return 'twee regels '+twee.h;
+      if(H.bits[0]!==1 || H.bits[H.w-1]!==1 || H.bits[(H.h-1)*H.w]!==1) return 'bijsnijden';
+      return tekstBitmap(Object.assign({}, o, {tekst:'   '}))===null;
+    });
+    await test('Tekst plaatsen: eigen laag in het actieve garen, zwevend, ongedaan haalt hem weg', async ()=>{
+      const n = doc.lagen.length, kleurVoor = doc.kleur, kleur = doc.kleur = 4;
+      const bm = tekstBitmap({tekst:'W', font:'Helvetica Neue', px:24, drempel:50, regel:1.15, uitlijn:'links', spatie:0});
+      if(!tekstPlaats(bm)) return 'plaatsen mislukt';
+      if(doc.lagen.length!==n+1 || doc.lagen[doc.actief].naam!=='tekst' || !zwevend || inst.tool!=='transformeer') return 'niet zwevend klaargezet';
+      transformKlaar(false); selZetRuw(null);
+      const L = doc.lagen[doc.actief]; let k = 0, andere = 0;
+      for(let i=0;i<L.data.length;i++){ if(L.data[i]===kleur) k++; else if(L.data[i]!==LEEG) andere++; }
+      if(k!==bm.bits.reduce((s,v)=>s+v, 0) || andere) return 'punten '+k+' / '+andere;
+      ongedaan(); ongedaan(); doc.kleur = kleurVoor;
+      return doc.lagen.length===n;
+    });
+    await test('Lagen: vulgeheugen erft bij samenvoegen en dupliceren (emmer pakt het hele verloopvlak)', async ()=>{
+      const B = doc.lagen[1].data, Bkopie = B.slice(), m = new Uint8Array(64*48), bb = {actief:true, x0:10, y0:10, x1:49, y1:39};
+      for(let y=10;y<40;y++) for(let x=10;x<50;x++){ B[y*64+x] = x<23 ? 2 : x<37 ? 3 : 4; m[y*64+x] = 1; }
+      doc.actief = 1; doc.vullingen = []; vulGeheugenBewaar([2,3,4], m, bb);
+      maakVuilAlles(); verzekerComposiet();
+      laagMerge();                                                   // laag 1 + achtergrond → één laag
+      if(doc.lagen.length!==2 || doc.actief!==0) return 'samenvoegen '+doc.lagen.length+'/'+doc.actief;
+      doc.actief = 1;                                                // de laag erboven
+      strokeKopie.set(doc.lagen[1].data);
+      const r = vulRegio(15, 20, {zicht:true, aaneen:true});
+      let n = 0; if(r) for(let i=0;i<r.m.length;i++) n += r.m[i];
+      if(!r || !r.geheugen || n!==40*30) return 'na samenvoegen: '+(r ? n+' punten, geheugen '+r.geheugen : 'geen vlak');
+      doc.actief = 0; laagDupliceer();                               // kopie van de samengevoegde laag
+      doc.actief = doc.lagen.length-1; strokeKopie.set(doc.lagen[doc.actief].data);
+      const r2 = vulRegio(45, 20, {zicht:true, aaneen:true});
+      let n2 = 0; if(r2) for(let i=0;i<r2.m.length;i++) n2 += r2.m[i];
+      ongedaan(); ongedaan();
+      const terug = doc.lagen.length===3 && doc.lagen[1].data===B;
+      B.set(Bkopie); doc.vullingen = []; doc.actief = 1; maakVuilAlles(); verzekerComposiet();
+      return r2 && r2.geheugen && n2===40*30 && terug;
     });
     await test('Import geïndexeerde PNG als laag: garens op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
