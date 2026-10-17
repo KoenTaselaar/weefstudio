@@ -1,4 +1,4 @@
-const CACHE = 'weefstudio2-v2.12';
+const CACHE = 'weefstudio2-v2.13';
 const PREFIX = 'weefstudio2-';
 const KERN = ['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', e=>{

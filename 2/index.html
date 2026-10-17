@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#242427">
-<title>WeefStudio</title>
+<title>PAINT 3K</title>
 <style>
 
 :root{
@@ -236,7 +236,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<meta name="apple-mobile-web-app-title" content="WS2 bèta">
+<meta name="apple-mobile-web-app-title" content="PAINT 3K">
 </head>
 <body>
 <svg id="iconen" xmlns="http://www.w3.org/2000/svg" style="display:none">
@@ -330,12 +330,12 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
   <footer id="onderbalk">
     <div id="garenbalk">
       <div id="stalen"></div>
-      <button class="staalknop" id="kKleurPlus" title="nieuw garen"><svg class="ic"><use href="#i-plus"/></svg></button>
+      <button class="staalknop" id="kKleurPlus" title="nieuwe kleur"><svg class="ic"><use href="#i-plus"/></svg></button>
     </div>
     <div id="selectieBalk" hidden>
       <div class="seg" id="selSoorten">
         <button data-sel="auto" title="automatisch: tik op een vlak"><svg class="ic"><use href="#i-toverstaf"/></svg><span>Auto</span></button>
-        <button data-sel="garen" title="alle punten met dit garen, overal op het kleed"><span>Garen</span></button>
+        <button data-sel="garen" title="alle punten met deze kleur, overal op het kleed"><span>Kleur</span></button>
         <button data-sel="lasso" title="vrije hand"><svg class="ic"><use href="#i-lasso"/></svg><span>Lasso</span></button>
         <button data-sel="rechthoek"><svg class="ic"><use href="#i-rechthoek"/></svg><span>Rechthoek</span></button>
         <button data-sel="ellips"><svg class="ic"><use href="#i-ellips"/></svg><span>Ellips</span></button>
@@ -351,7 +351,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         <button id="kSelKopieer" title="kopiëren (⌘C)"><svg class="ic"><use href="#i-kopie"/></svg></button>
         <button id="kSelKnip" title="knippen (⌘X)"><svg class="ic"><use href="#i-knip"/></svg></button>
         <button id="kSelPlak" title="plakken (⌘V)"><svg class="ic"><use href="#i-plak"/></svg></button>
-        <button id="kSelVul" title="selectie vullen met het actieve garen">Vul</button>
+        <button id="kSelVul" title="selectie vullen met de actieve kleur">Vul</button>
         <button id="kSelWis" title="selectie leegmaken (⌫)">Wis</button>
         <button id="kSelNiets" title="selectie opheffen (⌘D)">Opheffen</button>
       </div>
@@ -405,16 +405,16 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
     <div class="paneelkop">Vullen</div>
     <div class="paneelinhoud">
       <div class="seg kolom" id="vulSoorten">
-        <button data-vul="emmer"><b>Emmer</b><small>vlak vullen met het actieve garen</small></button>
-        <button data-vul="glitter"><b>Glittervul</b><small>drie garens door elkaar, per korrel</small></button>
+        <button data-vul="emmer"><b>Emmer</b><small>vlak vullen met de actieve kleur</small></button>
+        <button data-vul="glitter"><b>Glittervul</b><small>drie kleuren door elkaar, per korrel</small></button>
         <button data-vul="verloop"><b>Verloopvul</b><small>tik in een vlak en sleep: banden door het palet</small></button>
       </div>
       <div class="sectiekop">Begrenzing</div>
       <div class="seg" id="vulZichtKeuze"><button data-v="1">wat je ziet (alle lagen)</button><button data-v="0">alleen deze laag</button></div>
       <div class="sectiekop">Bereik</div>
-      <div class="seg" id="vulAaneenKeuze"><button data-v="1">aaneengesloten vlak</button><button data-v="0">overal dit garen</button></div>
+      <div class="seg" id="vulAaneenKeuze"><button data-v="1">aaneengesloten vlak</button><button data-v="0">overal deze kleur</button></div>
       <div class="uitleg" id="vulRefNoot"></div>
-      <div class="uitleg">De dikte-schuif is bij vullen de korrel: de blokgrootte van glitter- en verloopvul. De dekking-schuif werkt ook bij vullen: 50% = om-en-om garenmix in blokken van die korrel. Een glitter- of verloopvlak wordt onthouden: tik er later opnieuw in en het hele vlak wordt opnieuw gevuld, ook met de gewone emmer.</div>
+      <div class="uitleg">De dikte-schuif is bij vullen de korrel: de blokgrootte van glitter- en verloopvul. De dekking-schuif werkt ook bij vullen: 50% = om-en-om kleurmix in blokken van die korrel. Een glitter- of verloopvlak wordt onthouden: tik er later opnieuw in en het hele vlak wordt opnieuw gevuld, ook met de gewone emmer.</div>
       <div id="verloopKeuzeVul"></div>
     </div>
   </div>
@@ -441,21 +441,21 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
   <div class="paneel menu" id="paneelLaagMenu" hidden></div>
 
   <div class="paneel" id="paneelKleur" hidden>
-    <div class="paneelkop">Garens <span class="kopknoppen"><button class="ik" id="kpInvert" title="alle garens omkeren (negatief)"><svg class="ic"><use href="#i-draai"/></svg></button></span></div>
+    <div class="paneelkop">Kleuren <span class="kopknoppen"><button class="ik" id="kpInvert" title="alle kleuren omkeren (negatief)"><svg class="ic"><use href="#i-draai"/></svg></button></span></div>
     <div class="paneelinhoud">
       <div id="kpStalen"></div>
       <div class="rij">
-        <button class="knop" id="kpPlus"><svg class="ic"><use href="#i-plus"/></svg> nieuw garen</button>
+        <button class="knop" id="kpPlus"><svg class="ic"><use href="#i-plus"/></svg> nieuwe kleur</button>
         <button class="knop" id="kpMin"><svg class="ic"><use href="#i-min"/></svg> weg</button>
-        <button class="knop" id="kpLinks" title="garen naar links">◀</button>
-        <button class="knop" id="kpRechts" title="garen naar rechts">▶</button>
+        <button class="knop" id="kpLinks" title="kleur naar links">◀</button>
+        <button class="knop" id="kpRechts" title="kleur naar rechts">▶</button>
       </div>
       <div class="sectie">
         <div class="rij"><div id="kpHuidig"></div><input type="text" id="kpHex" maxlength="7" spellcheck="false" autocomplete="off"></div>
         <canvas id="kpSL" width="280" height="160"></canvas>
         <canvas id="kpHue" width="280" height="28"></canvas>
         <div id="kpPresets"></div>
-        <label class="rij schakel" id="kpWisselRij"><span>verander óók wat al getekend is (garenwissel)</span><input type="checkbox" id="kpWissel"></label>
+        <label class="rij schakel" id="kpWisselRij"><span>verander óók wat al getekend is (kleurwissel)</span><input type="checkbox" id="kpWissel"></label>
         <div class="uitleg" id="kpUitleg"></div>
       </div>
     </div>
@@ -476,7 +476,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         <button class="knop breed" id="kImpProject"><svg class="ic"><use href="#i-import"/></svg> Projectbestand openen</button>
         <button class="knop breed" id="kPlakken"><svg class="ic"><use href="#i-plak"/></svg> Plakken</button>
         <button class="knop breed" id="kTekstToevoegen"><svg class="ic"><use href="#i-tekst"/></svg> Tekst…</button>
-        <div class="uitleg">Een afbeelding als laag krijgt de garens van dit kleed (dichtstbijzijnde kleur). Een referentie ligt los over het doek om na te tekenen en wordt niet geëxporteerd.</div>
+        <div class="uitleg">Een afbeelding als laag krijgt de kleuren van dit kleed (dichtstbijzijnde kleur). Een referentie ligt los over het doek om na te tekenen en wordt niet geëxporteerd.</div>
       </div>
       <div class="tab" data-tab="doek">
         <button class="knop breed" id="kBijsnijd">Bijsnijden en formaat…</button>
@@ -485,7 +485,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <button class="knop" id="kDoekSpiegelV"><svg class="ic"><use href="#i-spiegelv"/></svg> spiegel</button>
           <button class="knop" id="kDoekDraai"><svg class="ic"><use href="#i-draai"/></svg> draai 90°</button>
         </div>
-        <button class="knop breed" id="kGarens">Garentelling…</button>
+        <button class="knop breed" id="kGarens">Kleurtelling…</button>
         <button class="knop breed" id="kInfo">Kleedinformatie…</button>
         <div class="sectiekop">Weergave</div>
         <label class="rij schakel"><span>pixelraster (36 dpi, zichtbaar vanaf 300%)</span><input type="checkbox" id="schRaster"></label>
@@ -506,7 +506,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
       <div class="tab" data-tab="instellingen">
         <div class="rij"><span class="rijlabel">zijbalk</span><div class="seg klein" id="zijbalkKant"><button data-kant="links">links</button><button data-kant="rechts">rechts</button></div></div>
         <div class="rij"><span class="rijlabel">vingers tekenen</span><div class="seg klein" id="vingerKeuze"><button data-v="auto">tot Pencil</button><button data-v="ja">altijd</button><button data-v="nee">nooit</button></div></div>
-        <label class="rij schakel"><span>garenbalk onderin</span><input type="checkbox" id="schGarenbalk"></label>
+        <label class="rij schakel"><span>kleurenbalk onderin</span><input type="checkbox" id="schGarenbalk"></label>
         <label class="rij schakel"><span>vier vingers tikken verbergt de balken</span><input type="checkbox" id="schVierVingers"></label>
         <div class="uitleg">"Tot Pencil": vingers tekenen totdat de app een Apple Pencil ziet; daarna schuiven en zoomen ze alleen nog.</div>
       </div>
@@ -514,22 +514,22 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         <div class="help">
           <p><b>Gebaren</b></p>
           <p>Eén vinger tekent (of schuift na Pencil-gebruik). Twee vingers: knijpen = zoomen en schuiven. Twee vingers tikken = ongedaan, drie = opnieuw. Vier vingers tikken verbergt de balken, als dat aanstaat bij Instellingen.</p>
-          <p>Verloopstift en verloopvul gebruiken het actieve verloop (onder Stiften of Vullen): elk verloop heeft zijn eigen garens en er zijn zes stijlen. Zonder gekozen garens lopen ze vanaf het actieve garen door het palet.</p>
+          <p>Verloopstift en verloopvul gebruiken het actieve verloop (onder Stiften of Vullen): elk verloop heeft zijn eigen kleuren en er zijn zes stijlen. Zonder gekozen kleuren lopen ze vanaf de actieve kleur door het palet.</p>
           <p>Vullen over lagen: zet je lijnlaag via het laagmenu als referentie, dan begrenzen alleen die lijnen het vullen, op welke laag je ook werkt. Zonder referentie onthoudt de app elk glitter- of verloopvlak (ook op andere lagen), zodat een tik erin het hele vlak opnieuw vult.</p>
           <p>Exporteren (Acties › Delen): kies wat (hele kleed, selectie, per laag), het formaat en de maat; tik op Maak bestand en daarna op Delen. Meer bestanden tegelijk komen als één zip.</p>
-          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een garennummer, het palet staat in garenvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen garennummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per garen" geeft per gebruikt garen een doorzichtige PNG (in garenkleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de garenlijst: per garen punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren. SVG geeft per garen een vectorpad dat de rasterpunten exact volgt, met de maat in mm: voor vinyl- en lasersnijden, plotters en drukwerk op elke grootte. PDF op ware grootte (of 1:2, 1:5, 1:10) is om te printen bij een copyshop of op een plotter; het palet en de garennummers zitten erin, de blokken blijven scherp.</p>
-          <p>Tekst (de T in de bovenbalk, of Acties › Toevoegen › Tekst…): typ een tekst, kies een lettertype van het apparaat of laad een eigen lettertype (ttf, otf, woff; het wordt bewaard), zet de hoogte in rasterpunten en de dikte (dun, normaal, dik). De letters worden hard afgekapt tot rasterpunten in het actieve garen en komen als eigen laag zwevend op het doek: verplaats, schaal of draai, dan Klaar.</p>
-          <p>Voor het getouw (bij PNG en BMP van het hele kleed of een selectie): "dichtheid anders" rekent het ontwerp om naar een andere dichtheid, ook ongelijk in breedte en hoogte (bijvoorbeeld 14 × 12 per cm), met naaste buur of de meerderheid per blok. "Stroken" deelt een breed kleed op in panelen van hooguit zoveel cm met overlap, elk een eigen bestand; de snijlijnen staan in panelen.csv en in de garenlijst. Dit is rekenwerk op rasterpunten, geen weefsimulatie.</p>
+          <p>PNG geïndexeerd is het standaardformaat voor het TextielLab: elk rasterpunt is een kleurnummer, het palet staat in kleurvolgorde in het bestand en de maat in cm zit erin. Importeer je zo'n bestand weer (Galerij › Importeer voor een nieuw kleed, Acties › Toevoegen › Afbeelding als laag), dan komen kleurnummers, palet en dichtheid ongewijzigd terug. BMP 8 bits is hetzelfde zonder compressie, voor weefsoftware die geen PNG leest; ook dat leest de app weer in. "Per kleur" geeft per gebruikte kleur een doorzichtige PNG (in kleur of zwart, voor zeefdruk en maskers). Elke zip bevat ook de kleurenlijst: per kleur punten, procent en cm² als CSV, JSON en GPL-palet; die lijst is ook los te exporteren. SVG geeft per kleur een vectorpad dat de rasterpunten exact volgt, met de maat in mm: voor vinyl- en lasersnijden, plotters en drukwerk op elke grootte. PDF op ware grootte (of 1:2, 1:5, 1:10) is om te printen bij een copyshop of op een plotter; het palet en de kleurnummers zitten erin, de blokken blijven scherp.</p>
+          <p>Tekst (de T in de bovenbalk, of Acties › Toevoegen › Tekst…): typ een tekst, kies een lettertype van het apparaat of laad een eigen lettertype (ttf, otf, woff; het wordt bewaard), zet de hoogte in rasterpunten en de dikte (dun, normaal, dik). De letters worden hard afgekapt tot rasterpunten in de actieve kleur en komen als eigen laag zwevend op het doek: verplaats, schaal of draai, dan Klaar.</p>
+          <p>Voor het getouw (bij PNG en BMP van het hele kleed of een selectie): "dichtheid anders" rekent het ontwerp om naar een andere dichtheid, ook ongelijk in breedte en hoogte (bijvoorbeeld 14 × 12 per cm), met naaste buur of de meerderheid per blok. "Stroken" deelt een breed kleed op in panelen van hooguit zoveel cm met overlap, elk een eigen bestand; de snijlijnen staan in panelen.csv en in de kleurenlijst. Dit is rekenwerk op rasterpunten, geen weefsimulatie.</p>
           <p>Stil houden vóór je beweegt = kleur oppikken. Stil houden ná een haal = de haal wordt een strakke lijn, cirkel of rechthoek; blijf vasthouden en sleep het eindpunt.</p>
           <p><b>Zijbalk</b></p>
-          <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om garenmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
-          <p><b>Garens</b></p>
-          <p>Elke kleur is één garen; maximaal 28. Een garen aanpassen verandert alles wat ermee getekend is (garenwissel) — of maak er een nieuw garen van.</p>
+          <p>Bovenste schuif = dikte, onderste = dekking als weefraster (50% = om-en-om kleurmix). De dikte is ook de korrel: blokgrootte van spuitbus, glitter, verloopvul en dekking, en de patroonmaat van de bindingen. Het vierkantje is de pipet.</p>
+          <p><b>Kleuren</b></p>
+          <p>Maximaal 64 kleuren per tekening; het TextielLab weeft er hooguit 28 in één kleed. Een kleur aanpassen verandert alles wat ermee getekend is (kleurwissel) — of maak er een nieuwe kleur van.</p>
           <p><b>Lagen</b></p>
           <p>Dekking van een laag is ook een weefraster. Alpha-slot: alleen tekenen waar de laag al iets heeft.</p>
           <p><b>Toetsenbord</b></p>
-          <p>B stift · E gum · G vullen · S selectie · V transformeer · I pipet · L lagen · C garens · [ ] dikte · X spiegel · ⌘Z/⇧⌘Z · ⌘C/X/V · ⌘A/⌘D · ⌘0 passend · ⌘1 100%</p>
-          <p class="versie">WeefStudio <span id="versieTekst"></span></p>
+          <p>B stift · E gum · G vullen · S selectie · V transformeer · I pipet · L lagen · C kleuren · [ ] dikte · X spiegel · ⌘Z/⇧⌘Z · ⌘C/X/V · ⌘A/⌘D · ⌘0 passend · ⌘1 100%</p>
+          <p class="versie">PAINT 3K <span id="versieTekst"></span></p>
         </div>
       </div>
     </div>
@@ -537,7 +537,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
 
   <div id="galerijScherm" hidden>
     <header id="galerijKop">
-      <div class="titel">WeefStudio <small>galerij · <span id="galVersie"></span></small></div>
+      <div class="titel">PAINT 3K <small>galerij · <span id="galVersie"></span></small></div>
       <div class="kopknoppen">
         <button class="knop" id="kGalImport"><svg class="ic"><use href="#i-import"/></svg> Importeer</button>
         <button class="knop primair" id="kGalNieuw"><svg class="ic"><use href="#i-plus"/></svg> Nieuw kleed</button>
@@ -557,12 +557,14 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
 'use strict';
 
 const LEEG = 255;                 // "geen pixel op deze laag"
-const MAX_KLEUREN = 28;           // jacquard-grens: hooguit 28 garens
+const MAX_KLEUREN = 64;           // het palet; het TextielLab weeft er hooguit WEEF_KLEUREN
+const WEEF_KLEUREN = 28;
 const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per cm
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.12';
+const APP_VERSIE = '2.13';
+const APP_NAAM = 'PAINT 3K';
 
 const BAYER = (()=>{
   let m = [[0]];
@@ -1366,12 +1368,12 @@ const STIFTEN = [
   {id:'rechthoek',naam:'Rechthoek',  groep:'vormen'},
   {id:'ellips',   naam:'Ellips',     groep:'vormen'},
   {id:'spuit',    naam:'Spuitbus',   groep:'effect', uitleg:'strooit korrels, blijft spuiten als je stilhoudt'},
-  {id:'glitter',  naam:'Glitter',    groep:'effect', uitleg:'strooit alle garens door elkaar'},
+  {id:'glitter',  naam:'Glitter',    groep:'effect', uitleg:'strooit alle kleuren door elkaar'},
   {id:'regenboog',naam:'Regenboog',  groep:'effect', uitleg:'loopt door het hele palet'},
-  {id:'verloop',  naam:'Verloop',    groep:'effect', uitleg:'reist van garen naar garen, ±10 cm per overgang'},
+  {id:'verloop',  naam:'Verloop',    groep:'effect', uitleg:'reist van kleur naar kleur, ±10 cm per overgang'},
   {id:'stippel',  naam:'Stippel',    groep:'effect', uitleg:'stiksel: stukje wel, stukje niet'},
   {id:'wiebel',   naam:'Wiebel',     groep:'effect', uitleg:'bibberige lijn'},
-  {id:'koord',    naam:'Koord',      groep:'effect', uitleg:'twee garens getwijnd om je lijn'},
+  {id:'koord',    naam:'Koord',      groep:'effect', uitleg:'twee kleuren getwijnd om je lijn'},
   {id:'keper1',   naam:'Keper ⟋',   groep:'binding'},
   {id:'keper2',   naam:'Keper ⟍',   groep:'binding'},
   {id:'visgraat', naam:'Visgraat',   groep:'binding'},
@@ -1796,7 +1798,7 @@ function tekenVerloopPijl(h){
   wctx.lineWidth = 1.5; wctx.strokeStyle = '#fff'; lijnen();
   const ddx = h.vx-h.sx, ddy = h.vy-h.sy;
   const recht = ddx===0 || ddy===0 || Math.abs(ddx)===Math.abs(ddy);
-  const tekst = h.kleuren.length+' garens · '+nlGetal(Math.hypot(ddx, ddy)/doc.pxcm, 1)+' cm'+(recht ? ' · recht' : '');
+  const tekst = h.kleuren.length+' kleuren · '+nlGetal(Math.hypot(ddx, ddy)/doc.pxcm, 1)+' cm'+(recht ? ' · recht' : '');
   wctx.font = '12px -apple-system, system-ui, sans-serif';
   const tw = wctx.measureText(tekst).width;
   wctx.fillStyle = 'rgba(0,0,0,.8)'; wctx.fillRect(bx+12, by-11, tw+12, 22);
@@ -3071,7 +3073,7 @@ function zetTool(t){
   if(!hintGetoond[t]){
     hintGetoond[t] = true;
     if(t==='vul') toast('Vullen: tik in een vlak · nogmaals op de emmer voor glitter- en verloopvul · dikte = korrel');
-    else if(t==='selectie') toast('Selectie: sleep een rechthoek of kies onderin Auto, Garen, Lasso of Ellips');
+    else if(t==='selectie') toast('Selectie: sleep een rechthoek of kies onderin Auto, Kleur, Lasso of Ellips');
   }
 }
 const hintGetoond = {};
@@ -3171,7 +3173,7 @@ function bouwStalen(){
   doc.palet.forEach((hex, i)=>{
     const b = maak('button', 'staal'+(i===doc.kleur?' actief':'')+(i===0?' doek':'')+(isLicht(hex)?'':' donker'));
     b.style.background = hex;
-    b.title = i===0 ? 'doek (achtergrondgaren)' : 'garen '+i;
+    b.title = i===0 ? 'doek (achtergrondkleur)' : 'kleur '+i;
     b.addEventListener('click', ()=>{
       if(doc.kleur===i){ paneelToggle('kleur'); return; }
       if(paneelActief && paneelActief!=='kleur') paneelSluit();
@@ -3189,8 +3191,12 @@ function bouwStalen(){
 }
 el('kKleurPlus').addEventListener('click', ()=>{ kleurPlus(); paneelOpen('kleur'); });
 
+function weefGrensHint(){
+  if(doc.palet.length === WEEF_KLEUREN && !doc.weefHintGetoond){ doc.weefHintGetoond = true; toast('Meer dan '+WEEF_KLEUREN+' kleuren: het TextielLab weeft er hooguit '+WEEF_KLEUREN+' in één kleed', true); }
+}
 function kleurPlus(){
-  if(doc.palet.length >= MAX_KLEUREN){ toast('Maximaal '+MAX_KLEUREN+' garens (jacquard-grens)'); return false; }
+  if(doc.palet.length >= MAX_KLEUREN){ toast('Maximaal '+MAX_KLEUREN+' kleuren'); return false; }
+  weefGrensHint();
   const p = doc.palet.slice();
   p.push(doc.palet[doc.kleur]);
   paletActie(p);
@@ -3204,11 +3210,11 @@ function kleurInGebruik(idx){
 }
 async function kleurMin(){
   const idx = doc.kleur;
-  if(idx===0){ toast('Het doekgaren kan niet weg'); return; }
-  if(doc.palet.length<=2){ toast('Minstens twee garens'); return; }
+  if(idx===0){ toast('De achtergrondkleur kan niet weg'); return; }
+  if(doc.palet.length<=2){ toast('Minstens twee kleuren'); return; }
   let repl = idx>1 ? idx-1 : 0;
   if(kleurInGebruik(idx)){
-    const ok = await bevestig('Dit garen wordt op het kleed gebruikt. Die punten krijgen het garen links ervan.', 'Verwijder toch');
+    const ok = await bevestig('Deze kleur wordt op het kleed gebruikt. Die punten krijgen de kleur links ervan.', 'Verwijder toch');
     if(!ok) return;
   }
   const map = new Uint8Array(256);
@@ -3295,9 +3301,9 @@ function kpUitlegBij(){
   const gebruikt = kleurInGebruik(doc.kleur);
   el('kpWisselRij').style.display = gebruikt ? '' : 'none';
   el('kpUitleg').textContent = gebruikt
-    ? (el('kpWissel').checked ? 'Garenwissel: alles wat met dit garen getekend is verandert live mee.'
-                              : 'Dit garen is in gebruik. Aanpassen maakt er automatisch een nieuw garen bij; vink aan om het overal te wisselen.')
-    : 'Dit garen is nog nergens gebruikt: aanpassen kan vrij.';
+    ? (el('kpWissel').checked ? 'Kleurwissel: alles wat met deze kleur getekend is verandert live mee.'
+                              : 'Deze kleur is in gebruik. Aanpassen maakt er automatisch een nieuwe kleur bij; vink aan om het overal te wisselen.')
+    : 'Deze kleur is nog nergens gebruikt: aanpassen kan vrij.';
 }
 el('kpWissel').addEventListener('change', kpUitlegBij);
 function kpTekenSL(){
@@ -3330,12 +3336,13 @@ function kpTekenHue(){
 function kpBegin(){
   if(kpBezig) return;
   if(kleurInGebruik(doc.kleur) && !el('kpWissel').checked){
-    if(doc.palet.length >= MAX_KLEUREN){ toast('Palet vol: vink "garenwissel" aan of verwijder een garen'); return; }
+    if(doc.palet.length >= MAX_KLEUREN){ toast('Palet vol: vink "kleurwissel" aan of verwijder een kleur'); return; }
+    weefGrensHint();
     kpPaletVoor = doc.palet.slice();
     doc.palet.push(doc.palet[doc.kleur]);
     doc.kleur = doc.palet.length-1;
     paletGewijzigd(); bouwStalen(); kpStalenBij();
-    toast('Nieuw garen toegevoegd');
+    toast('Nieuwe kleur toegevoegd');
   }else kpPaletVoor = doc.palet.slice();
   kpBezig = true;
 }
@@ -3390,7 +3397,7 @@ el('kpLinks').addEventListener('click', ()=>kleurVerplaats(-1));
 el('kpRechts').addEventListener('click', ()=>kleurVerplaats(1));
 el('kpInvert').addEventListener('click', ()=>{
   paletActie(doc.palet.map(h=>{ const [r,g,b] = hexNaarRgb(h); return rgbNaarHex(255-r, 255-g, 255-b); }));
-  kpToon(); toast('Alle garens omgekeerd (nogmaals = terug)');
+  kpToon(); toast('Alle kleuren omgekeerd (nogmaals = terug)');
 });
 
 let thumbTimer = null;
@@ -3559,7 +3566,7 @@ function laagMenuOpen(L){
     ['Hernoem…', ()=>laagHernoem(L)],
     ['Inhoud selecteren', ()=>{ const m = maskVanLaag(L); if(maskBbox(m)) selZet(m); else toast('Laag is leeg'); }],
     ['Kopieer laag', ()=>kopieer(false)],
-    ['Vul met actief garen', ()=>{ doc.actief = doc.lagen.indexOf(L); selVul(); }],
+    ['Vul met actieve kleur', ()=>{ doc.actief = doc.lagen.indexOf(L); selVul(); }],
     ['Wis laag' + (selMask ? ' (binnen selectie)' : ''), ()=>{ doc.actief = doc.lagen.indexOf(L); selWis(); }],
     ['Spiegel links-rechts', ()=>laagSpiegel(true)],
     ['Spiegel boven-onder', ()=>laagSpiegel(false)],
@@ -3628,7 +3635,7 @@ function stiftVoorbeeld(cv, id){
   else if(id==='wiebel'){ g.fillStyle = A; for(let x=4;x<w-4;x++) g.fillRect(x, golf(x)+Math.round((Math.random()-0.5)*4), 1, 2); }
   else if(id==='koord'){ for(let x=4;x<w-4;x++){ const a=x/2; g.fillStyle = A; g.fillRect(x, Math.round(h/2+Math.sin(a)*4), 2, 2); g.fillStyle = B; g.fillRect(x, Math.round(h/2-Math.sin(a)*4), 2, 2); } }
 }
-const GROEPEN = [['tekenen','Tekenen'],['vormen','Vormen'],['effect','Effectstiften'],['binding','Bindingen — garen + volgende garen · dikte = patroonmaat']];
+const GROEPEN = [['tekenen','Tekenen'],['vormen','Vormen'],['effect','Effectstiften'],['binding','Bindingen — kleur + volgende kleur · dikte = patroonmaat']];
 function bouwStiften(){
   const vak = el('stiftLijst');
   vak.innerHTML = '';
@@ -3738,7 +3745,7 @@ function bouwVerloopKeuze(vak){
   vak.appendChild(stijl);
   const chips = maak('div', 'vkChips');
   const zichtbaar = g.kleuren.filter(k=>k<doc.palet.length);
-  if(!zichtbaar.length) chips.appendChild(maak('span', 'uitleg', 'Verloop '+(doc.verloopActief+1)+' is nog leeg: het begint dan bij het actieve garen en loopt door het hele palet. Tik hieronder garens aan, in volgorde.'));
+  if(!zichtbaar.length) chips.appendChild(maak('span', 'uitleg', 'Verloop '+(doc.verloopActief+1)+' is nog leeg: het begint dan bij de actieve kleur en loopt door het hele palet. Tik hieronder kleuren aan, in volgorde.'));
   g.kleuren.forEach((k, i)=>{
     if(k>=doc.palet.length) return;
     const c = maak('button', 'vkChip'+(isLicht(doc.palet[k]) ? '' : ' donker')); c.style.background = doc.palet[k]; c.title = 'weghalen uit dit verloop';
@@ -3750,7 +3757,7 @@ function bouwVerloopKeuze(vak){
   const pal = maak('div', 'vkPalet');
   doc.palet.forEach((hex, k)=>{
     const b = maak('button', 'vkStaal'); b.style.background = hex; b.title = 'toevoegen aan dit verloop';
-    b.addEventListener('click', ()=>{ if(g.kleuren.length >= 12){ toast('Maximaal 12 garens in een verloop'); return; } g.kleuren.push(k); markeerGewijzigd(); bouwVerloopKeuze(vak); });
+    b.addEventListener('click', ()=>{ if(g.kleuren.length >= 12){ toast('Maximaal 12 kleuren in een verloop'); return; } g.kleuren.push(k); markeerGewijzigd(); bouwVerloopKeuze(vak); });
     pal.appendChild(b);
   });
   vak.appendChild(pal);
@@ -3761,7 +3768,7 @@ function bouwVerloopKeuze(vak){
   weg.addEventListener('click', ()=>{ doc.verlopen.splice(doc.verloopActief, 1); doc.verloopActief = Math.max(0, doc.verloopActief-1); markeerGewijzigd(); bouwVerloopKeuze(vak); });
   knoppen.append(leeg, weg);
   vak.appendChild(knoppen);
-  vak.appendChild(maak('div', 'uitleg', (VERLOOP_UITLEG[inst.verloopStijl]||'') + ' Tik op een gekozen garen om het weg te halen. Bij het vullen bepaalt je sleep richting en lengte; rond 0°, 45° en 90° klikt de richting vast.'));
+  vak.appendChild(maak('div', 'uitleg', (VERLOOP_UITLEG[inst.verloopStijl]||'') + ' Tik op een gekozen kleur om hem weg te halen. Bij het vullen bepaalt je sleep richting en lengte; rond 0°, 45° en 90° klikt de richting vast.'));
 }
 
 el('selSoorten').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.selSoort = b.dataset.sel; bewaarInst(); knoppenBij(); });
@@ -3820,7 +3827,7 @@ el('kRefWeg').addEventListener('click', ()=>{ if(!doc.ref) return; const voor = 
 el('kExport').addEventListener('click', ()=>{ paneelSluit(); exportDialoog(); });
 el('zijbalkKant').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.zijbalkLinks = b.dataset.kant==='links'; bewaarInst(); actiesBij(); knoppenBij(); });
 el('vingerKeuze').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.vingerTekent = b.dataset.v; bewaarInst(); actiesBij(); });
-schakel('schGarenbalk', 'garenbalk', knoppenBij);
+schakel('schGarenbalk', 'kleurenbalk', knoppenBij);
 schakel('schVierVingers', 'vierVingers');
 function uiToggle(){
   const weg = document.body.classList.toggle('uiWeg');
@@ -4004,12 +4011,12 @@ function garensDialoog(){
   const tel = new Uint32Array(256);
   for(let i=0;i<samenIdx.length;i++) tel[samenIdx[i]]++;
   const tot = samenIdx.length, cm2 = 1/(doc.pxcm*doc.pxcm);
-  const tab = maak('table', 'garens');
+  const tab = maak('table', 'kleuren');
   const rijen = doc.palet.map((hex,i)=>({hex,i,n:tel[i]})).sort((a,b)=>b.n-a.n);
   rijen.forEach(r=>{
     const tr = maak('tr');
     const sw = maak('td'); const s = maak('span','sw'); s.style.background = r.hex; sw.appendChild(s);
-    const naam = maak('td','', (r.i===0?'doek ':'garen '+r.i+' ')+r.hex);
+    const naam = maak('td','', (r.i===0?'doek ':'kleur '+r.i+' ')+r.hex);
     const pct = maak('td','', nlGetal(r.n/tot*100, 1)+'%');
     const opp = maak('td','', r.n*cm2 >= 10000 ? nlGetal(r.n*cm2/10000, 2)+' m²' : nlGetal(r.n*cm2, 0)+' cm²');
     const balk = maak('td'); const b = maak('div','balk'); const ii = maak('i'); ii.style.width = (r.n/tot*100)+'%'; ii.style.background = r.hex; b.appendChild(ii); balk.appendChild(b);
@@ -4017,9 +4024,9 @@ function garensDialoog(){
     tab.appendChild(tr);
   });
   const vak = maak('div');
-  vak.appendChild(maak('div','uitleg', rijen.filter(r=>r.n).length+' van '+doc.palet.length+' garens in gebruik · '+nlGetal(doc.w/doc.pxcm,0)+' × '+nlGetal(doc.h/doc.pxcm,0)+' cm = '+nlGetal(tot*cm2/10000,2)+' m²'));
+  vak.appendChild(maak('div','uitleg', rijen.filter(r=>r.n).length+' van '+doc.palet.length+' kleuren in gebruik · '+nlGetal(doc.w/doc.pxcm,0)+' × '+nlGetal(doc.h/doc.pxcm,0)+' cm = '+nlGetal(tot*cm2/10000,2)+' m²'));
   vak.appendChild(tab);
-  dialoogOpen('Garentelling', vak, [{tekst:'Sluiten', primair:true}]);
+  dialoogOpen('Kleurtelling', vak, [{tekst:'Sluiten', primair:true}]);
 }
 function infoDialoog(){
   const vak = maak('div');
@@ -4030,7 +4037,7 @@ function infoDialoog(){
   let gebruikt = 0; for(let i=0;i<256;i++) gebruikt += telG[i];
   const info = maak('div','uitleg');
   info.innerHTML = `${nlGetal(doc.w/doc.pxcm,1)} × ${nlGetal(doc.h/doc.pxcm,1)} cm · ${doc.w} × ${doc.h} rasterpunten · ${nlGetal(doc.pxcm,2)} per cm<br>`+
-    `${doc.lagen.length} lagen · ${gebruikt} van ${doc.palet.length} garens zichtbaar in gebruik<br>`+
+    `${doc.lagen.length} lagen · ${gebruikt} van ${doc.palet.length} kleuren zichtbaar in gebruik<br>`+
     `gemaakt ${new Date(doc.gemaakt).toLocaleDateString('nl-NL')} · gewijzigd ${new Date(doc.gewijzigd).toLocaleString('nl-NL')}`;
   vak.append(inN, info);
   dialoogOpen('Kleedinformatie', vak, [{tekst:'Annuleer'}, {tekst:'OK', primair:true, actie:()=>{ const n = inN.value.trim(); if(n && n!==doc.naam){ doc.naam = n; markeerGewijzigd(); knoppenBij(); } }}]);
@@ -4213,7 +4220,7 @@ async function tekstDialoog(){
     weg.style.display = eigenFonts.some(f=>f.familie===o.font) ? '' : 'none';
   };
   const teken = ()=>{
-    if(!bm){ voorbeeld.width = 1; voorbeeld.height = 1; info.textContent = ta.value.trim() ? info.textContent : 'Typ een tekst; hij komt in het actieve garen op een eigen laag.'; if(plaatsKnop) plaatsKnop.disabled = true; return; }
+    if(!bm){ voorbeeld.width = 1; voorbeeld.height = 1; info.textContent = ta.value.trim() ? info.textContent : 'Typ een tekst; hij komt in de actieve kleur op een eigen laag.'; if(plaatsKnop) plaatsKnop.disabled = true; return; }
     voorbeeld.width = bm.w; voorbeeld.height = bm.h;
     const g = voorbeeld.getContext('2d'), img = g.createImageData(bm.w, bm.h), D = img.data;
     const [r0,g0,b0] = hexNaarRgb(doc.palet[0]), [r1,g1,b1] = hexNaarRgb(doc.palet[doc.kleur]);
@@ -4633,7 +4640,7 @@ function importAfbeeldingBestand(f){
   }).catch(()=>toast('Dit bestand kan niet als afbeelding geopend worden'));
 }
 function naamUitBestand(f){
-  return f.name.replace(/\.[^.]+$/, '').replace(/(_sel)?_\d+x\d+$/, '').replace(/_garen\d\d_[0-9a-f]{6}$/, '') || 'import';
+  return f.name.replace(/\.[^.]+$/, '').replace(/(_sel)?_\d+x\d+$/, '').replace(/_(garen|kleur)\d\d_[0-9a-f]{6}$/, '') || 'import';
 }
 function pngDoorzichtig(info){
   const t = new Uint8Array(256);
@@ -4677,7 +4684,7 @@ async function importIndexAlsNieuw(info, idx, naam){
   d.actief = 1;
   zetDoc(d);
   bewaarNu();
-  toast('Geïndexeerd bestand geopend: '+palet.length+' garens, '+nlGetal(pxcm,0)+' per cm');
+  toast('Geïndexeerd bestand geopend: '+palet.length+' kleuren, '+nlGetal(pxcm,0)+' per cm');
 }
 function importIndexAlsLaag(info, idx){
   if(doc.lagen.length >= maxLagen()){ toast('Maximaal '+maxLagen()+' lagen bij dit formaat'); return; }
@@ -4703,7 +4710,7 @@ function importIndexAlsLaag(info, idx){
     selZet(m);
   });
   zetTool('transformeer');
-  toast('Het bestand staat op een nieuwe laag (garens op kleur gekoppeld) — verplaats hem, dan Klaar');
+  toast('Het bestand staat op een nieuwe laag (kleuren aan het palet gekoppeld) — verplaats hem, dan Klaar');
 }
 function laadAfbeelding(f){
   return new Promise((res, rej)=>{
@@ -4765,7 +4772,7 @@ async function importAlsNieuw(img, naam){
   d.actief = 1;
   zetDoc(d);
   bewaarNu();
-  toast('Geïmporteerd met '+palet.length+' garens');
+  toast('Geïmporteerd met '+palet.length+' kleuren');
 }
 function importAlsLaag(img){
   if(doc.lagen.length >= maxLagen()){ toast('Maximaal '+maxLagen()+' lagen bij dit formaat'); return; }
@@ -5008,7 +5015,7 @@ async function maakPngIndex(o){
   const latin1 = s=>Uint8Array.from(s, ch=>{ const c = ch.charCodeAt(0); return (c>=32 && c<127) || (c>=160 && c<256) ? c : 63; });  // tEXt is Latin-1
   const tekst = (k, v)=>pngChunk('tEXt', new Bytes().tekst(k).u8(0).bytes(latin1(v)).af());
   const ws = Object.assign({pxcm:o.pxcm, w, h, palet:o.palet}, transparant!==null ? {transparant} : {}, o.extra||{});
-  delen.push(tekst('Title', o.naam||'kleed'), tekst('Software', 'WeefStudio '+APP_VERSIE), tekst('weefstudio', JSON.stringify(ws)));
+  delen.push(tekst('Title', o.naam||'kleed'), tekst('Software', APP_NAAM+' '+APP_VERSIE), tekst('weefstudio', JSON.stringify(ws)));
   const BLOK = 256;
   let idat;
   if(window.CompressionStream && !o.zonderStream){
@@ -5156,11 +5163,11 @@ function garenlijstBestanden(naam, r, tel, getouw){
   const json = {app:'weefstudio', versie:APP_VERSIE, naam:doc.naam, pxcm:doc.pxcm, w:r.w, h:r.h, breedte_cm:Math.round(cmW*10)/10, hoogte_cm:Math.round(cmH*10)/10, palet:doc.palet, totaal, garens};
   if(getouw) json.getouw = getouw;
   const gpl = ['GIMP Palette', 'Name: '+doc.naam.replace(/[\r\n]+/g, ' '), 'Columns: 8', '#'];
-  garens.forEach(g=>gpl.push(String(g.r).padStart(3)+' '+String(g.g).padStart(3)+' '+String(g.b).padStart(3)+'\tgaren '+tweeCijfers(g.nummer)+' '+g.hex));
+  garens.forEach(g=>gpl.push(String(g.r).padStart(3)+' '+String(g.g).padStart(3)+' '+String(g.b).padStart(3)+'\tkleur '+tweeCijfers(g.nummer)+' '+g.hex));
   return [
-    {naam:naam+'_garens.csv',  data:enc.encode('\uFEFF'+csv.join('\r\n')+'\r\n'), comprimeer:true},   // BOM: dan weet Excel dat het UTF-8 is
-    {naam:naam+'_garens.json', data:enc.encode(JSON.stringify(json, null, 1)), comprimeer:true},
-    {naam:naam+'_garens.gpl',  data:enc.encode(gpl.join('\n')+'\n'), comprimeer:true},
+    {naam:naam+'_kleuren.csv',  data:enc.encode('\uFEFF'+csv.join('\r\n')+'\r\n'), comprimeer:true},   // BOM: dan weet Excel dat het UTF-8 is
+    {naam:naam+'_kleuren.json', data:enc.encode(JSON.stringify(json, null, 1)), comprimeer:true},
+    {naam:naam+'_kleuren.gpl',  data:enc.encode(gpl.join('\n')+'\n'), comprimeer:true},
   ];
 }
 function garensInGebruik(tel, metDoek){
@@ -5211,9 +5218,9 @@ function xmlTekst(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function mmTekst(v){ return String(Math.round(v*1000)/1000); }
 function svgKop(w, h, naam){
   return '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="'+mmTekst(w/doc.pxcm*10)+'mm" height="'+mmTekst(h/doc.pxcm*10)+'mm" viewBox="0 0 '+w+' '+h+'" shape-rendering="crispEdges">\n'+
-         '<title>'+xmlTekst(naam)+'</title>\n<desc>WeefStudio '+APP_VERSIE+' · '+String(doc.pxcm).replace('.', ',')+' rasterpunten per cm · '+w+' × '+h+' punten</desc>\n';
+         '<title>'+xmlTekst(naam)+'</title>\n<desc>'+APP_NAAM+' '+APP_VERSIE+' · '+String(doc.pxcm).replace('.', ',')+' rasterpunten per cm · '+w+' × '+h+' punten</desc>\n';
 }
-function svgPad(i, hex, d){ return '<path id="garen-'+tweeCijfers(i)+'" fill="'+hex+'" fill-rule="evenodd" d="'+d+'"/>\n'; }
+function svgPad(i, hex, d){ return '<path id="kleur-'+tweeCijfers(i)+'" fill="'+hex+'" fill-rule="evenodd" d="'+d+'"/>\n'; }
 const SVG_WAARSCHUW_PX = 4e6;
 
 const PDF_MAX_PT = 14400, PT_PER_CM = 72/2.54;
@@ -5261,7 +5268,7 @@ async function maakPdf(o){   // o = {r, schaal, naam, rij(y, uit), voortgang, ge
   if(o.schaal!==1){
     const regels = [o.naam,
       nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm · schaal 1:'+o.schaal,
-      doc.palet.length+' garens · '+String(doc.pxcm).replace('.', ',')+' punten per cm · '+new Date().toISOString().slice(0,10)];
+      doc.palet.length+' kleuren · '+String(doc.pxcm).replace('.', ',')+' punten per cm · '+new Date().toISOString().slice(0,10)];
     const breedte = m.w - m.marge;
     regels.forEach((regel, i)=>{ inhoud += 'BT\n/F1 '+pdfPasTekst(regel, breedte)+' Tf\n'+pdfGetal(m.marge)+' '+pdfGetal(m.marge+28-11*i)+' Td\n'+pdfTekst(regel)+' Tj\nET\n'; });
   }
@@ -5269,7 +5276,7 @@ async function maakPdf(o){   // o = {r, schaal, naam, rij(y, uit), voortgang, ge
   streamObj(5, ' /Type /XObject /Subtype /Image /Width '+w+' /Height '+h+' /ColorSpace [/Indexed /DeviceRGB '+(doc.palet.length-1)+' <'+doc.palet.map(hx=>hx.slice(1)).join('')+'>] /BitsPerComponent 8 /Interpolate false'+filter, data);
   obj(6, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
   const d = new Date(), p2 = n=>String(n).padStart(2, '0');
-  obj(7, '<< /Title '+pdfTekst(o.naam)+' /Producer '+pdfTekst('WeefStudio '+APP_VERSIE)+' /Creator (WeefStudio) /CreationDate (D:'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+p2(d.getHours())+p2(d.getMinutes())+p2(d.getSeconds())+') >>');
+  obj(7, '<< /Title '+pdfTekst(o.naam)+' /Producer '+pdfTekst(APP_NAAM+' '+APP_VERSIE)+' /Creator '+pdfTekst(APP_NAAM)+' /CreationDate (D:'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+p2(d.getHours())+p2(d.getMinutes())+p2(d.getSeconds())+') >>');
   const xref = b.lengte;
   let tabel = 'xref\n0 8\n0000000000 65535 f \n';
   for(let i=1;i<=7;i++) tabel += String(offsets[i]).padStart(10, '0')+' 00000 n \n';
@@ -5348,16 +5355,16 @@ async function exportGetouw(o, r, naam, voortgang, geannuleerd){
 }
 
 const EXPORT_FORMATEN = [
-  {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'garennummers en maat in cm zitten in het bestand; per laag of per garen doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
+  {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'kleurnummers en maat in cm zitten in het bestand; per laag of per kleur doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
   {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
   {id:'bmp',     naam:'BMP 8 bits',                       uitleg:'geïndexeerd zonder compressie, voor weefsoftware die geen PNG leest', wat:['kleed','selectie'], maat:false},
-  {id:'svg',     naam:'SVG (vectoren per garen)',         uitleg:'voor snijden (vinyl, laser) en drukwerk; per garen een pad, exact langs de rasterpunten', wat:['kleed','selectie','garen'], maat:false},
+  {id:'svg',     naam:'SVG (vectoren per kleur)',         uitleg:'voor snijden (vinyl, laser) en drukwerk; per kleur een pad, exact langs de rasterpunten', wat:['kleed','selectie','garen'], maat:false},
   {id:'pdf',     naam:'PDF op ware grootte',              uitleg:'om te printen of te plotten; schaal 1:1, 1:2, 1:5 of 1:10, blokken blijven scherp', wat:['kleed','selectie'], maat:'schaal'},
-  {id:'garenlijst', naam:'Garenlijst (CSV, JSON, GPL)',   uitleg:'per garen het aantal punten, procent en cm²; zit ook in elke zip',    wat:['kleed','selectie'], maat:false},
-  {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en garens; later weer te openen',           wat:['kleed'], maat:false},
+  {id:'kleurenlijst', naam:'Kleurenlijst (CSV, JSON, GPL)',   uitleg:'per kleur het aantal punten, procent en cm²; zit ook in elke zip',    wat:['kleed','selectie'], maat:false},
+  {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en kleuren; later weer te openen',           wat:['kleed'], maat:false},
   {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
 ];
-const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag'],['garen','per garen']];
+const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag'],['garen','per kleur']];
 const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, schaal:1, naam:'', garenZwart:false, metDoek:false, svgDoek:true,
                      dichtheidAan:false, pxcmX:0, pxcmY:0, methode:'naaste', panelenAan:false, paneelCm:140, overlapCm:2};
 let exportTaak = null;      // {geannuleerd, blob, naam}
@@ -5377,17 +5384,17 @@ async function exportMaak(o, voortgang, geannuleerd){
     const randen = new Uint8Array((r.w+1)*(r.h+1)), m = new Uint8Array(r.w*r.h);
     const maskVoor = (i)=>{ for(let y=0;y<r.h;y++){ const rij = (r.y0+y)*w + r.x0, uit = y*r.w; for(let x=0;x<r.w;x++) m[uit+x] = samenIdx[rij+x]===i ? 1 : 0; } return m; };
     const lijst = garensInGebruik(tel, o.wat==='garen' ? o.metDoek : o.svgDoek!==false);
-    if(!lijst.length) throw new Error('Geen garens in gebruik');
+    if(!lijst.length) throw new Error('Geen kleuren in gebruik');
     if(o.wat==='garen'){
       const bestanden = [];
       for(let k=0;k<lijst.length;k++){
         const i = lijst[k], hex = doc.palet[i];
         const t = await traceerMasker(maskVoor(i), r.w, r.h, randen, async f=>voortgang((k+f)/lijst.length));
         if(geannuleerd()) return null;
-        bestanden.push({naam:naam+'_garen'+tweeCijfers(i)+'_'+hex.slice(1)+'.svg', data:enc.encode(svgKop(r.w, r.h, naam+' garen '+tweeCijfers(i))+svgPad(i, o.garenZwart ? '#000000' : hex, t.d)+'</svg>\n'), comprimeer:true});
+        bestanden.push({naam:naam+'_kleur'+tweeCijfers(i)+'_'+hex.slice(1)+'.svg', data:enc.encode(svgKop(r.w, r.h, naam+' kleur '+tweeCijfers(i))+svgPad(i, o.garenZwart ? '#000000' : hex, t.d)+'</svg>\n'), comprimeer:true});
       }
       bestanden.push(...garenlijstBestanden(naam, r, tel));
-      return {blob: await maakZip(bestanden), naam:naam+'_per_garen_svg.zip'};
+      return {blob: await maakZip(bestanden), naam:naam+'_per_kleur_svg.zip'};
     }
     let svg = svgKop(r.w, r.h, naam);
     for(let k=0;k<lijst.length;k++){
@@ -5406,27 +5413,27 @@ async function exportMaak(o, voortgang, geannuleerd){
     if(!blob) return null;
     return {blob, naam:naam+(o.wat==='selectie' ? '_sel' : '')+'_'+r.w+'x'+r.h+(schaal===1 ? '' : '_1op'+schaal)+'.pdf'};
   }
-  if(o.formaat==='garenlijst'){
+  if(o.formaat==='kleurenlijst'){
     const tel = garenTelling(r);
     await voortgang(0.5);
-    return {blob: await maakZip(garenlijstBestanden(naam, r, tel)), naam:naam+'_garenlijst.zip'};
+    return {blob: await maakZip(garenlijstBestanden(naam, r, tel)), naam:naam+'_kleurenlijst.zip'};
   }
   if(o.formaat==='pngidx'){
     verzekerComposiet();
     const w = doc.w;
     if(o.wat==='garen'){
       const tel = garenTelling(r), lijst = garensInGebruik(tel, o.metDoek), bestanden = [];
-      if(!lijst.length) throw new Error('Geen garens in gebruik');
+      if(!lijst.length) throw new Error('Geen kleuren in gebruik');
       for(let k=0;k<lijst.length;k++){
         const i = lijst[k], hex = doc.palet[i];
-        const blob = await maakPngIndex({w:r.w, h:r.h, palet:[o.garenZwart ? '#000000' : hex], transparant:1, pxcm:doc.pxcm, naam:naam+' garen '+tweeCijfers(i), extra:{garen:i, hex},
+        const blob = await maakPngIndex({w:r.w, h:r.h, palet:[o.garenZwart ? '#000000' : hex], transparant:1, pxcm:doc.pxcm, naam:naam+' kleur '+tweeCijfers(i), extra:{garen:i, hex},
           rij:(y, uit)=>{ const rij = (r.y0+y)*w + r.x0; for(let x=0;x<r.w;x++) uit[x] = samenIdx[rij+x]===i ? 0 : 1; },
           voortgang: async f=>voortgang((k+f)/lijst.length), geannuleerd});
         if(!blob) return null;
-        bestanden.push({naam:naam+'_garen'+tweeCijfers(i)+'_'+hex.slice(1)+'.png', data:blob});
+        bestanden.push({naam:naam+'_kleur'+tweeCijfers(i)+'_'+hex.slice(1)+'.png', data:blob});
       }
       bestanden.push(...garenlijstBestanden(naam, r, tel));
-      return {blob: await maakZip(bestanden), naam:naam+'_per_garen.zip'};
+      return {blob: await maakZip(bestanden), naam:naam+'_per_kleur.zip'};
     }
     if(o.wat==='lagen'){
       const bestanden = [], T = doc.palet.length;        // doorzichtig = extra index achter het palet
@@ -5578,19 +5585,19 @@ function exportDialoog(){
     optieRij.style.display = (exportKeuze.wat==='garen' || svgDoekKeuze) ? '' : 'none';
     optieSeg.innerHTML = ''; optieSeg2.innerHTML = '';
     if(svgDoekKeuze){
-      [[true,'met doekgaren'],[false,'zonder doekgaren (open achtergrond)']].forEach(([v, tekst])=>{
+      [[true,'met achtergrondkleur'],[false,'zonder achtergrondkleur (open achtergrond)']].forEach(([v, tekst])=>{
         const b = maak('button', v===exportKeuze.svgDoek ? 'actief' : '', tekst);
         b.addEventListener('click', ()=>{ exportKeuze.svgDoek = v; bouw(); });
         optieSeg.appendChild(b);
       });
     }
     if(exportKeuze.wat==='garen'){
-      [[false,'garenkleur'],[true,'zwart']].forEach(([v, tekst])=>{
+      [[false,'in kleur'],[true,'zwart']].forEach(([v, tekst])=>{
         const b = maak('button', v===exportKeuze.garenZwart ? 'actief' : '', tekst);
         b.addEventListener('click', ()=>{ exportKeuze.garenZwart = v; bouw(); });
         optieSeg.appendChild(b);
       });
-      [[false,'zonder doekgaren'],[true,'met doekgaren']].forEach(([v, tekst])=>{
+      [[false,'zonder achtergrondkleur'],[true,'met achtergrondkleur']].forEach(([v, tekst])=>{
         const b = maak('button', v===exportKeuze.metDoek ? 'actief' : '', tekst);
         b.addEventListener('click', ()=>{ exportKeuze.metDoek = v; bouw(); });
         optieSeg2.appendChild(b);
@@ -5620,22 +5627,22 @@ function exportDialoog(){
     }
     const r = exportRect(exportKeuze.wat), blok = f.maat===true ? exportKeuze.blok : 1;
     let tekst = '';
-    if(f.id==='project') tekst = 'Het hele kleed met lagen, garens en verlopen, als .weefstudio.json.';
+    if(f.id==='project') tekst = 'Het hele kleed met lagen, kleuren en verlopen, als .weefstudio.json.';
     else if(f.id==='pdf'){
       const m = pdfPaginaMaat(r, exportKeuze.schaal);
-      tekst = 'Pagina '+nlGetal(m.w/PT_PER_CM,1)+' × '+nlGetal(m.h/PT_PER_CM,1)+' cm (schaal 1:'+exportKeuze.schaal+(exportKeuze.schaal===1 ? ', ware grootte' : ', met marge en onderschrift')+') · '+doc.palet.length+' garens, blokken blijven scherp';
+      tekst = 'Pagina '+nlGetal(m.w/PT_PER_CM,1)+' × '+nlGetal(m.h/PT_PER_CM,1)+' cm (schaal 1:'+exportKeuze.schaal+(exportKeuze.schaal===1 ? ', ware grootte' : ', met marge en onderschrift')+') · '+doc.palet.length+' kleuren, blokken blijven scherp';
       if(m.teGroot) tekst += ' — te groot (hooguit 508 cm per zijde), kies een kleinere schaal';
     }
     else if(f.id==='reserve') tekst = 'Alle kleden uit de galerij in één bestand. Bewaar het af en toe in Bestanden of iCloud.';
-    else if(f.id==='garenlijst') tekst = 'Per garen het aantal rasterpunten, procent en cm² van '+(exportKeuze.wat==='selectie' ? 'de selectie' : 'het hele kleed')+': CSV (Numbers, Excel), JSON en GPL-palet, samen in een zip.';
+    else if(f.id==='kleurenlijst') tekst = 'Per kleur het aantal rasterpunten, procent en cm² van '+(exportKeuze.wat==='selectie' ? 'de selectie' : 'het hele kleed')+': CSV (Numbers, Excel), JSON en GPL-palet, samen in een zip.';
     else {
       const uitW = r.w*blok, uitH = r.h*blok;
       let voor = '';
-      if(exportKeuze.wat==='lagen') voor = doc.lagen.length+' bestanden + garenlijst in een zip, elk ';
-      else if(exportKeuze.wat==='garen'){ if(!telKleed) telKleed = garenTelling(r); const n = garensInGebruik(telKleed, exportKeuze.metDoek).length; voor = n+' garen'+(n===1?'':'s')+' in gebruik → '+n+' bestanden + garenlijst in een zip, elk '; }
+      if(exportKeuze.wat==='lagen') voor = doc.lagen.length+' bestanden + kleurenlijst in een zip, elk ';
+      else if(exportKeuze.wat==='garen'){ if(!telKleed) telKleed = garenTelling(r); const n = garensInGebruik(telKleed, exportKeuze.metDoek).length; voor = n+' kleur'+(n===1?'':'s')+' in gebruik → '+n+' bestanden + kleurenlijst in een zip, elk '; }
       tekst = voor + uitW+' × '+uitH+' pixels ('+nlGetal(r.w/doc.pxcm,1)+' × '+nlGetal(r.h/doc.pxcm,1)+' cm)';
       if(f.id==='svg'){
-        if(exportKeuze.wat!=='garen'){ if(!telKleed) telKleed = garenTelling(exportRect('kleed')); const n = garensInGebruik(exportKeuze.wat==='selectie' ? garenTelling(r) : telKleed, exportKeuze.svgDoek).length; tekst = n+' garen'+(n===1?'':'s')+' → '+n+' paden · '+r.w+' × '+r.h+' rasterpunten = '+nlGetal(r.w/doc.pxcm*10,1)+' × '+nlGetal(r.h/doc.pxcm*10,1)+' mm'; }
+        if(exportKeuze.wat!=='garen'){ if(!telKleed) telKleed = garenTelling(exportRect('kleed')); const n = garensInGebruik(exportKeuze.wat==='selectie' ? garenTelling(r) : telKleed, exportKeuze.svgDoek).length; tekst = n+' kleur'+(n===1?'':'s')+' → '+n+' paden · '+r.w+' × '+r.h+' rasterpunten = '+nlGetal(r.w/doc.pxcm*10,1)+' × '+nlGetal(r.h/doc.pxcm*10,1)+' mm'; }
         if(r.w*r.h > SVG_WAARSCHUW_PX) tekst += ' — let op: boven 4 miljoen rasterpunten kan het bestand tientallen MB worden; een selectie is handiger';
       }
       if(uitW*uitH > MAX_PX) tekst += ' — te groot, kies kleinere blokken';
@@ -5647,9 +5654,9 @@ function exportDialoog(){
       if(getouw && exportKeuze.panelenAan){
         const pxX = exportKeuze.dichtheidAan ? exportKeuze.pxcmX : doc.pxcm, uw = exportKeuze.dichtheidAan ? dichtheidMaat(r, exportKeuze.pxcmX, exportKeuze.pxcmY).w : r.w;
         const {panelen} = paneelIndeling(uw, pxX, exportKeuze.paneelCm, exportKeuze.overlapCm);
-        tekst += ' · '+panelen.length+(panelen.length===1 ? ' strook' : ' stroken')+' in een zip: '+panelen.map(p=>nlGetal((p.x1-p.x0)/pxX,1)).join(' / ')+' cm breed, snijlijnen in de garenlijst';
+        tekst += ' · '+panelen.length+(panelen.length===1 ? ' strook' : ' stroken')+' in een zip: '+panelen.map(p=>nlGetal((p.x1-p.x0)/pxX,1)).join(' / ')+' cm breed, snijlijnen in de kleurenlijst';
       }
-      if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' garens, '+(getouw && exportKeuze.dichtheidAan ? nlGetal(exportKeuze.pxcmX,1)+' × '+nlGetal(exportKeuze.pxcmY,1) : nlGetal(doc.pxcm,0))+' per cm in het bestand';
+      if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' kleuren, '+(getouw && exportKeuze.dichtheidAan ? nlGetal(exportKeuze.pxcmX,1)+' × '+nlGetal(exportKeuze.pxcmY,1) : nlGetal(doc.pxcm,0))+' per cm in het bestand';
       if(f.id==='bmp' && !(getouw && exportKeuze.panelenAan)){ const bm = (getouw && exportKeuze.dichtheidAan) ? dichtheidMaat(r, exportKeuze.pxcmX, exportKeuze.pxcmY) : r; tekst += ' · '+maatTekstBestand(bmpGrootte(bm.w, bm.h, doc.palet.length)); }
     }
     info.textContent = tekst;
@@ -5842,7 +5849,7 @@ async function zelftest(){
       const r = await exportMaak({wat:'lagen', formaat:'pngrgb', blok:1, maat:true, naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
       if(items.length!==6) return 'aantal '+items.length;
-      if(items[1].naam!=='zt_laag02_laag 1.png' || items[3].naam!=='zt_garens.csv') return 'naam '+items[1].naam+' / '+items[3].naam;
+      if(items[1].naam!=='zt_laag02_laag 1.png' || items[3].naam!=='zt_kleuren.csv') return 'naam '+items[1].naam+' / '+items[3].naam;
       const bm = await createImageBitmap(new Blob([items[1].inhoud], {type:'image/png'}));
       const c = document.createElement('canvas'); c.width = 64; c.height = 48;
       const g = c.getContext('2d'); g.drawImage(bm, 0, 0);
@@ -5864,7 +5871,7 @@ async function zelftest(){
       if(info.trns) return 'onverwachte tRNS';
       if(info.pxcm!==14) return 'pHYs '+info.pxcm;
       if(!info.ws || info.ws.pxcm!==14 || info.ws.w!==64 || info.ws.h!==48 || info.ws.palet.join()!==doc.palet.join()) return 'weefstudio-chunk '+JSON.stringify(info.ws);
-      if(info.tekst.Title!=='zt' || !/^WeefStudio /.test(info.tekst.Software||'')) return 'tEXt '+JSON.stringify(info.tekst);
+      if(info.tekst.Title!=='zt' || !(info.tekst.Software||'').startsWith(APP_NAAM+' ')) return 'tEXt '+JSON.stringify(info.tekst);
       return r.naam==='zt_64x48.png';
     });
     await test('PNG geïndexeerd: eigen decoder = samenIdx, index voor index', async ()=>{
@@ -5873,7 +5880,7 @@ async function zelftest(){
       if(idx.length!==samenIdx.length) return 'lengte '+idx.length;
       for(let i=0;i<idx.length;i++) if(idx[i]!==samenIdx[i]) return 'afwijking bij punt '+i+': '+idx[i]+' ≠ '+samenIdx[i];
       let n3 = 0; for(let i=0;i<idx.length;i++) if(idx[i]===3) n3++;
-      return n3>0 || 'garen 3 (dubbele hex) komt niet voor';
+      return n3>0 || 'kleur 3 (dubbele hex) komt niet voor';
     });
     await test('PNG geïndexeerd: de browser leest hem en kleuren kloppen', async ()=>{
       const r = await exportMaak({wat:'kleed', formaat:'pngidx', naam:'zt'}, niets, nooit);
@@ -5899,7 +5906,7 @@ async function zelftest(){
     await test('PNG geïndexeerd per laag: zip, tRNS, leeg = doorzichtige extra index', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
-      if(items.length!==6 || items[1].naam!=='zt_laag02_laag 1.png' || items[5].naam!=='zt_garens.gpl') return 'zip '+items.map(i=>i.naam).join(',');
+      if(items.length!==6 || items[1].naam!=='zt_laag02_laag 1.png' || items[5].naam!=='zt_kleuren.gpl') return 'zip '+items.map(i=>i.naam).join(',');
       const info = leesPng(items[1].inhoud), T = doc.palet.length;
       if(!info.plte || info.plte.length!==T+1 || !info.trns || info.trns[T]!==0 || info.trns[0]!==255) return 'PLTE/tRNS '+JSON.stringify([info.plte && info.plte.length, info.trns && Array.from(info.trns)]);
       const idx = await pngIndices(info), B = doc.lagen[1].data;
@@ -5941,41 +5948,41 @@ async function zelftest(){
       return r.naam==='zt_sel_20x20.bmp' && r.blob.size===54+20+20*20;
     });
     const telZt = garenTelling({x0:0, y0:0, w:64, h:48});
-    await test('Per garen: gebruikte garens, twee indices, doorzichtig elders, garenlijst erbij', async ()=>{
+    await test('Per kleur: gebruikte kleuren, twee indices, doorzichtig elders, kleurenlijst erbij', async ()=>{
       const r = await exportMaak({wat:'garen', formaat:'pngidx', naam:'zt', garenZwart:false, metDoek:false}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
       const namen = items.map(i=>i.naam);
-      if(items.length!==6 || namen[0]!=='zt_garen01_1a1a1a.png' || namen[2]!=='zt_garen03_d23c2a.png' || namen[3]!=='zt_garens.csv') return 'zip '+namen.join(',');
+      if(items.length!==6 || namen[0]!=='zt_kleur01_1a1a1a.png' || namen[2]!=='zt_kleur03_d23c2a.png' || namen[3]!=='zt_kleuren.csv') return 'zip '+namen.join(',');
       const info = leesPng(items[1].inhoud);
       if(!info.plte || info.plte[0]!=='#d23c2a' || info.plte.length!==2 || !info.trns || info.trns[0]!==255 || info.trns[1]!==0) return 'PLTE/tRNS '+JSON.stringify([info.plte, info.trns && Array.from(info.trns)]);
       if(!info.ws || info.ws.garen!==2 || info.ws.hex!=='#d23c2a') return 'weefstudio-chunk '+JSON.stringify(info.ws);
       const idx = await pngIndices(info);
       for(let i=0;i<idx.length;i++) if(idx[i]!==(samenIdx[i]===2 ? 0 : 1)) return 'afwijking bij punt '+i;
-      return r.naam==='zt_per_garen.zip';
+      return r.naam==='zt_per_kleur.zip';
     });
-    await test('Per garen: zwart op doorzichtig, met doekgaren', async ()=>{
+    await test('Per kleur: zwart op doorzichtig, met achtergrondkleur', async ()=>{
       const r = await exportMaak({wat:'garen', formaat:'pngidx', naam:'zt', garenZwart:true, metDoek:true}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
-      if(items.length!==7 || items[0].naam!=='zt_garen00_f2ead8.png') return 'zip '+items.map(i=>i.naam).join(',');
+      if(items.length!==7 || items[0].naam!=='zt_kleur00_f2ead8.png') return 'zip '+items.map(i=>i.naam).join(',');
       const info = leesPng(items[0].inhoud), idx = await pngIndices(info);
       if(info.plte[0]!=='#000000') return 'PLTE '+info.plte.join();
       for(let i=0;i<idx.length;i++) if(idx[i]!==(samenIdx[i]===0 ? 0 : 1)) return 'afwijking bij punt '+i;
       return true;
     });
-    await test('Garenlijst: CSV, JSON en GPL kloppen met de telling', async ()=>{
-      const r = await exportMaak({wat:'kleed', formaat:'garenlijst', naam:'zt'}, niets, nooit);
+    await test('Kleurenlijst: CSV, JSON en GPL kloppen met de telling', async ()=>{
+      const r = await exportMaak({wat:'kleed', formaat:'kleurenlijst', naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob)), dec = new TextDecoder();
-      if(items.length!==3 || r.naam!=='zt_garenlijst.zip') return 'zip '+items.map(i=>i.naam).join(',');
+      if(items.length!==3 || r.naam!=='zt_kleurenlijst.zip') return 'zip '+items.map(i=>i.naam).join(',');
       const csv = dec.decode(items[0].inhoud).replace(/^\uFEFF/, '').trim().split('\r\n');
       if(csv.length!==6 || !csv[0].startsWith('nummer;hex;R;G;B;punten;procent;cm2;kleed')) return 'csv '+csv[0];
       const kol = csv.slice(1).map(l=>l.split(';'));
       const som = kol.reduce((s,k)=>s+ +k[5], 0), proc = kol.reduce((s,k)=>s+parseFloat(k[6].replace(',', '.')), 0);
       if(som!==64*48 || Math.abs(proc-100)>0.1) return 'telling '+som+' / '+proc;
-      if(kol[2][5]!==String(telZt[2]) || kol[2][1]!=='#d23c2a' || kol[2][8]!=='zelftest' || kol[2][9]!=='14') return 'rij garen 2: '+csv[3];
+      if(kol[2][5]!==String(telZt[2]) || kol[2][1]!=='#d23c2a' || kol[2][8]!=='zelftest' || kol[2][9]!=='14') return 'rij kleur 2: '+csv[3];
       const json = JSON.parse(dec.decode(items[1].inhoud));
       if(json.garens.length!==5 || json.totaal!==3072 || json.garens[2].punten!==telZt[2] || json.pxcm!==14 || json.palet.join()!==doc.palet.join()) return 'json';
       const gpl = dec.decode(items[2].inhoud).trim().split('\n');
-      if(gpl[0]!=='GIMP Palette' || gpl.length!==9 || !/^\s*26\s+26\s+26\tgaren 01 #1a1a1a$/.test(gpl[5])) return 'gpl '+gpl[5];
+      if(gpl[0]!=='GIMP Palette' || gpl.length!==9 || !/^\s*26\s+26\s+26\tkleur 01 #1a1a1a$/.test(gpl[5])) return 'gpl '+gpl[5];
       return items[0].methode===8 || items[0].methode===0;
     });
     await test('SVG-tracering: blok 10×10 = vier segmenten, gat = twee lussen, diagonaal = twee losse lussen', async ()=>{
@@ -5992,11 +5999,11 @@ async function zelftest(){
       const leeg = await traceerMasker(mk(8, 8, ()=>false), 8, 8, new Uint8Array(81));
       return leeg.lussen===0 && leeg.d==='';
     });
-    await test('SVG hele kleed: een pad per gebruikt garen, maten in mm, rendert gelijk aan het composiet', async ()=>{
+    await test('SVG hele kleed: een pad per gebruikte kleur, maten in mm, rendert gelijk aan het composiet', async ()=>{
       const r = await exportMaak({wat:'kleed', formaat:'svg', naam:'zt', svgDoek:true}, niets, nooit);
       const svg = await r.blob.text();
       const paden = svg.match(/<path /g) || [];
-      if(paden.length!==4 || !/id="garen-00"/.test(svg) || !/id="garen-03" fill="#d23c2a"/.test(svg)) return 'paden '+paden.length;
+      if(paden.length!==4 || !/id="kleur-00"/.test(svg) || !/id="kleur-03" fill="#d23c2a"/.test(svg)) return 'paden '+paden.length;
       if(!/width="45\.714mm" height="34\.286mm" viewBox="0 0 64 48"/.test(svg)) return 'maten: '+(svg.match(/<svg[^>]*>/)||[''])[0];
       if(r.naam!=='zt_64x48.svg') return 'naam '+r.naam;
       const img = new Image(), url = URL.createObjectURL(r.blob);
@@ -6007,12 +6014,12 @@ async function zelftest(){
       for(let i=0;i<64*48;i++){ const k = samenIdx[i]*3; if(px[i*4]!==P[k] || px[i*4+1]!==P[k+1] || px[i*4+2]!==P[k+2] || px[i*4+3]!==255) return 'afwijking bij punt '+i+' ('+px[i*4]+','+px[i*4+1]+','+px[i*4+2]+','+px[i*4+3]+')'; }
       return true;
     });
-    await test('SVG per garen: zip met één pad per bestand, plus garenlijst; zonder doek = 3', async ()=>{
+    await test('SVG per kleur: zip met één pad per bestand, plus kleurenlijst; zonder doek = 3', async ()=>{
       const r = await exportMaak({wat:'garen', formaat:'svg', naam:'zt', garenZwart:false, metDoek:false}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob)), dec = new TextDecoder();
-      if(items.length!==6 || items[0].naam!=='zt_garen01_1a1a1a.svg' || items[3].naam!=='zt_garens.csv' || r.naam!=='zt_per_garen_svg.zip') return 'zip '+items.map(i=>i.naam).join(',');
+      if(items.length!==6 || items[0].naam!=='zt_kleur01_1a1a1a.svg' || items[3].naam!=='zt_kleuren.csv' || r.naam!=='zt_per_kleur_svg.zip') return 'zip '+items.map(i=>i.naam).join(',');
       const s = dec.decode(items[1].inhoud);
-      if((s.match(/<path /g)||[]).length!==1 || !/id="garen-02" fill="#d23c2a"/.test(s)) return 'inhoud garen 2';
+      if((s.match(/<path /g)||[]).length!==1 || !/id="kleur-02" fill="#d23c2a"/.test(s)) return 'inhoud kleur 2';
       const r2 = await exportMaak({wat:'kleed', formaat:'svg', naam:'zt', svgDoek:false}, niets, nooit);
       return ((await r2.blob.text()).match(/<path /g)||[]).length===3;
     });
@@ -6040,7 +6047,7 @@ async function zelftest(){
       const r = await exportMaak({wat:'kleed', formaat:'pdf', naam:'zt', schaal:10}, niets, nooit);
       const s = new TextDecoder('latin1').decode(await blobNaarBytes(r.blob)), m = pdfPaginaMaat({w:64, h:48}, 10);
       if(!s.includes('/MediaBox [0 0 '+pdfGetal(m.w)+' '+pdfGetal(m.h)+']')) return 'MediaBox';
-      if(!/schaal 1:10\)/.test(s) || !/5 garens · 14 punten per cm/.test(s) || (s.match(/\/F1 [\d.]+ Tf/g)||[]).length!==3 || !/\/BaseFont \/Helvetica/.test(s)) return 'onderschrift';
+      if(!/schaal 1:10\)/.test(s) || !/5 kleuren · 14 punten per cm/.test(s) || (s.match(/\/F1 [\d.]+ Tf/g)||[]).length!==3 || !/\/BaseFont \/Helvetica/.test(s)) return 'onderschrift';
       if(pdfPasTekst('abc', 1000)!==9 || pdfPasTekst('x'.repeat(100), 100)!==4 || pdfPasTekst('x'.repeat(20), 55)!==5) return 'pastekst '+pdfPasTekst('x'.repeat(20), 55);
       if(!pdfPaginaMaat({w:9000, h:9000}, 1).teGroot || pdfPaginaMaat({w:9000, h:9000}, 2).teGroot) return 'grens';
       if(pdfTekst('a(b)c\\d\u00e9\u2014')!=='(a\\(b\\)c\\\\d\u00e9?)') return 'escapes: '+pdfTekst('a(b)c\\d\u00e9\u2014');
@@ -6101,7 +6108,7 @@ async function zelftest(){
       if(H.bits[0]!==1 || H.bits[H.w-1]!==1 || H.bits[(H.h-1)*H.w]!==1) return 'bijsnijden';
       return tekstBitmap(Object.assign({}, o, {tekst:'   '}))===null;
     });
-    await test('Tekst plaatsen: eigen laag in het actieve garen, zwevend, ongedaan haalt hem weg', async ()=>{
+    await test('Tekst plaatsen: eigen laag in de actieve kleur, zwevend, ongedaan haalt hem weg', async ()=>{
       const n = doc.lagen.length, kleurVoor = doc.kleur, kleur = doc.kleur = 4;
       const bm = tekstBitmap({tekst:'W', font:'Helvetica Neue', px:24, drempel:50, regel:1.15, uitlijn:'links', spatie:0});
       if(!tekstPlaats(bm)) return 'plaatsen mislukt';
@@ -6134,7 +6141,7 @@ async function zelftest(){
       B.set(Bkopie); doc.vullingen = []; doc.actief = 1; maakVuilAlles(); verzekerComposiet();
       return r2 && r2.geheugen && n2===40*30 && terug;
     });
-    await test('Import geïndexeerde PNG als laag: garens op kleur, leeg blijft leeg', async ()=>{
+    await test('Import geïndexeerde PNG als laag: kleuren op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
       const info = leesPng(items[1].inhoud), idx = await pngIndices(info);
@@ -6148,7 +6155,7 @@ async function zelftest(){
       for(let i=0;i<B.length;i++) if(L.data[i]!==B[i]) return 'afwijking bij punt '+i+': '+L.data[i]+' ≠ '+B[i];
       return !selBbox && !zwevend;
     });
-    await test('Import geïndexeerde PNG als nieuw kleed: palet, garennummers en maat gelijk', async ()=>{
+    await test('Import geïndexeerde PNG als nieuw kleed: palet, kleurnummers en maat gelijk', async ()=>{
       const r = await exportMaak({wat:'kleed', formaat:'pngidx', naam:'zt'}, niets, nooit);
       const info = leesPng(await blobNaarBytes(r.blob)), idx = await pngIndices(info);
       await importIndexAlsNieuw(info, idx, 'rondreis');
@@ -6159,7 +6166,7 @@ async function zelftest(){
       for(let i=0;i<D.length;i++) if(D[i]!==samenKopie[i]) return 'afwijking bij punt '+i+': '+D[i]+' ≠ '+samenKopie[i];
       return doc.lagen.length===2;
     });
-    await test('Import BMP als nieuw kleed: palet, garennummers en maat gelijk', async ()=>{
+    await test('Import BMP als nieuw kleed: palet, kleurnummers en maat gelijk', async ()=>{
       verzekerComposiet();
       const samenNu = samenIdx.slice(), paletNu = doc.palet.slice(), w = doc.w, h = doc.h;
       const r = await exportMaak({wat:'kleed', formaat:'bmp', naam:'zt'}, niets, nooit);
@@ -6190,17 +6197,17 @@ async function zelftest(){
       const D = doc.lagen[0].data;
       return D[0]===1 && D[5*w+4]===9 && D[5*w+9]===14 && doc.w===w && doc.h===h;
     });
-    await test('Import PNG met groot palet (40 kleuren, 3 gebruikt): alleen gebruikte kleuren', async ()=>{
+    await test('Import PNG met groot palet (100 kleuren, 3 gebruikt): alleen gebruikte kleuren', async ()=>{
       const w = 8, h = 4, pal = [];
-      for(let i=0;i<40;i++) pal.push(rgbNaarHex((i*6)&255, (i*11)&255, (i*17)&255));
+      for(let i=0;i<100;i++) pal.push(rgbNaarHex((i*6)&255, (i*11)&255, (i*17)&255));
       const rijen = new Bytes();
-      for(let y=0;y<h;y++){ rijen.u8(0); for(let x=0;x<w;x++) rijen.u8(x<3 ? 7 : (y<2 ? 20 : 39)); }
+      for(let y=0;y<h;y++){ rijen.u8(0); for(let x=0;x<w;x++) rijen.u8(x<3 ? 7 : (y<2 ? 20 : 99)); }
       const idat = await comprimeer(rijen.af(), 'deflate');
-      const plte = new Uint8Array(120); pal.forEach((hx,i)=>{ const [r,g,b] = hexNaarRgb(hx); plte[i*3]=r; plte[i*3+1]=g; plte[i*3+2]=b; });
+      const plte = new Uint8Array(300); pal.forEach((hx,i)=>{ const [r,g,b] = hexNaarRgb(hx); plte[i*3]=r; plte[i*3+1]=g; plte[i*3+2]=b; });
       const png = new Blob([PNG_SIG, pngChunk('IHDR', new Bytes().u32be(w).u32be(h).u8(8).u8(3).u8(0).u8(0).u8(0).af()), pngChunk('PLTE', plte), pngChunk('IDAT', idat), pngChunk('IEND', new Uint8Array(0))]);
       const info = leesPng(await blobNaarBytes(png)), idx = await pngIndices(info);
       await importIndexAlsNieuw(info, idx, 'groot');
-      if(doc.palet.join()!==[pal[7], pal[20], pal[39]].join()) return 'palet '+doc.palet.join();
+      if(doc.palet.join()!==[pal[7], pal[20], pal[99]].join()) return 'palet '+doc.palet.join();
       const D = doc.lagen[0].data;
       return D[0]===0 && D[3]===1 && D[3*w+7]===2;
     });
@@ -6219,14 +6226,14 @@ async function zelftest(){
   const nOk = uit.filter(u=>u.ok).length;
   window.zelftestUitslag = uit;
   document.title = 'zelftest: '+nOk+'/'+uit.length+' ok';
-  const vak = maak('div'), tab = maak('table', 'garens');
+  const vak = maak('div'), tab = maak('table', 'kleuren');
   uit.forEach(u=>{
     const tr = maak('tr');
     tr.append(maak('td', '', u.ok ? '✓' : '✗'), maak('td', '', u.naam), maak('td', '', u.info));
     if(!u.ok) tr.style.color = 'var(--gevaar)';
     tab.appendChild(tr);
   });
-  vak.appendChild(maak('div', 'uitleg', nOk+' van '+uit.length+' controles goed · WeefStudio '+APP_VERSIE));
+  vak.appendChild(maak('div', 'uitleg', nOk+' van '+uit.length+' controles goed · '+APP_NAAM+' '+APP_VERSIE));
   vak.appendChild(tab);
   dialoogOpen('Zelftest', vak, [{tekst:'Sluiten', primair:true}]);
   console.table(uit);
