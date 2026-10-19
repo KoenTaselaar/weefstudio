@@ -1,6 +1,7 @@
-const CACHE = 'paint3k-v1.2';
+const CACHE = 'paint3k-v1.3';
 const PREFIX = 'paint3k-';
 const KERN = ['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png','./icon-maskable-512.png'];
+const NIETS = ()=>new Response('Geen verbinding en nog niets in de cache.', {status:503, headers:{'Content-Type':'text/plain;charset=utf-8'}});
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(KERN)).then(()=>self.skipWaiting()));
 });
@@ -14,10 +15,17 @@ self.addEventListener('fetch', e=>{
   const url = new URL(e.request.url);
   if(url.origin!==location.origin) return;
   e.respondWith(caches.open(CACHE).then(async c=>{
+    if(e.request.mode==='navigate'){
+      // de pagina zelf: eerst het net (hooguit 3 s wachten), anders de cache — zo zie je een nieuwe versie bij de eerstvolgende start
+      try{
+        const r = await Promise.race([fetch(e.request), new Promise((_, nee)=>setTimeout(()=>nee(new Error('traag')), 3000))]);
+        if(r && r.ok){ c.put(e.request, r.clone()); return r; }
+      }catch(err){}
+      return (await c.match(e.request, {ignoreSearch:true})) || (await c.match('./index.html')) || (await c.match('./')) || NIETS();
+    }
     const hit = await c.match(e.request, {ignoreSearch:true});
     const vers = fetch(e.request).then(r=>{ if(r && r.ok) c.put(e.request, r.clone()); return r; }).catch(()=>null);
     if(hit){ e.waitUntil(vers); return hit; }
-    const r = await vers;
-    return r || new Response('Geen verbinding en nog niets in de cache.', {status:503, headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    return (await vers) || NIETS();
   }));
 });

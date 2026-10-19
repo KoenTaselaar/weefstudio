@@ -80,6 +80,10 @@ body.zijRechts #schuifLabel{ left:auto; right:62px; }
 .staal.actief{ outline:3px solid #fff; outline-offset:1px; }
 .staal.doek::after{ content:'doek'; position:absolute; left:0; right:0; bottom:1px; font-size:8px; text-align:center; color:#000a; }
 .staal.doek.donker::after{ color:#fffa; }
+.staal small.nr{ position:absolute; right:3px; bottom:1px; font-size:9px; font-weight:700; color:#000b; line-height:1; }
+.staal.donker small.nr{ color:#fffc; }
+.kpStaal small.nr{ position:absolute; right:3px; bottom:2px; font-size:10px; font-weight:700; color:#000b; }
+.kpStaal.donker small.nr{ color:#fffc; }
 .staalknop{ width:42px; height:42px; border-radius:10px; border:2px dashed #666; background:transparent; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
 #selectieBalk, #transformBalk{ display:flex; align-items:center; gap:8px; height:var(--onderh); padding:0 8px; overflow-x:auto; scrollbar-width:none; touch-action:pan-x; }
 #selectieBalk::-webkit-scrollbar, #transformBalk::-webkit-scrollbar{ display:none; }
@@ -188,6 +192,7 @@ input[type=number]{ width:90px; }
 #galerijKop .kopknoppen{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 #galNotitie{ padding:10px 16px; font-size:14px; color:var(--tekst2); border-bottom:1px solid #111; line-height:1.45; }
 #galNotitie.let{ color:#ffb14a; }
+.uitleg.let{ color:#ffb14a; }
 #galNotitie b{ color:var(--tekst); }
 #galerijLijst{ flex:1; overflow-y:auto; padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:16px; align-content:start; touch-action:pan-y; }
 .kaart{ background:var(--paneel); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 2px 10px #0006; }
@@ -204,7 +209,8 @@ input[type=number]{ width:90px; }
 #dialoog.open{ display:flex; }
 #dialoogVenster{ background:var(--paneel); border-radius:16px; width:min(540px, 100%); max-height:100%; overflow:auto; padding:18px 18px 16px; box-shadow:0 20px 60px #000c; touch-action:pan-y; }
 #dialoogVenster h2{ font-size:18px; margin-bottom:12px; }
-.dialoogknoppen{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap; }
+.dialoogknoppen{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap; position:sticky; bottom:-16px; background:var(--paneel); padding:10px 0 16px; margin-bottom:-16px; }
+.dialoogknoppen:empty{ display:none; }
 .presets{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-bottom:12px; }
 .presets button{ background:var(--knop); border:2px solid transparent; border-radius:10px; padding:10px; text-align:left; display:flex; flex-direction:column; gap:2px; }
 .presets button.actief{ border-color:var(--accent); }
@@ -350,6 +356,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         <button data-modus="min" title="aftrekken van de selectie">－</button>
       </div>
       <div class="seg">
+        <button id="kSelNiets" title="selectie opheffen (⌘D)">Opheffen</button>
         <button id="kSelAlles" title="alles selecteren (⌘A)">Alles</button>
         <button id="kSelOmkeren" title="selectie omkeren">Omkeren</button>
         <button id="kSelKopieer" title="kopiëren (⌘C)"><svg class="ic"><use href="#i-kopie"/></svg></button>
@@ -357,7 +364,6 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
         <button id="kSelPlak" title="plakken (⌘V)"><svg class="ic"><use href="#i-plak"/></svg></button>
         <button id="kSelVul" title="selectie vullen met de actieve kleur">Vul</button>
         <button id="kSelWis" title="selectie leegmaken (⌫)">Wis</button>
-        <button id="kSelNiets" title="selectie opheffen (⌘D)">Opheffen</button>
       </div>
     </div>
     <div id="transformBalk" hidden>
@@ -445,7 +451,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
   <div class="paneel menu" id="paneelLaagMenu" hidden></div>
 
   <div class="paneel" id="paneelKleur" hidden>
-    <div class="paneelkop">Kleuren <span class="kopknoppen"><button class="ik" id="kpInvert" title="alle kleuren omkeren (negatief)"><svg class="ic"><use href="#i-draai"/></svg></button></span></div>
+    <div class="paneelkop">Kleuren <span class="kopknoppen"><button class="knop" id="kpInvert" title="alle kleuren omkeren (negatief)">negatief</button></span></div>
     <div class="paneelinhoud">
       <div id="kpStalen"></div>
       <div class="rij">
@@ -532,7 +538,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p><b>Lagen</b></p>
           <p>Dekking van een laag is ook een weefraster. Alpha-slot: alleen tekenen waar de laag al iets heeft.</p>
           <p><b>Toetsenbord</b></p>
-          <p>B stift · E gum · G vullen · S selectie · V transformeer · I pipet · L lagen · C kleuren · [ ] dikte · X spiegel · ⌘Z/⇧⌘Z · ⌘C/X/V · ⌘A/⌘D · ⌘0 passend · ⌘1 100%</p>
+          <p>B stift · E gum · G vullen · S selectie · V transformeer · T tekst · I pipet · H hand · spatie ingedrukt = schuiven · L lagen · C kleuren · [ ] dikte · X spiegel · ⌘Z ongedaan · ⇧⌘Z opnieuw · ⌘C/⌘X/⌘V kopiëren/knippen/plakken · ⇧⌘C zichtbaar beeld kopiëren · ⌘A alles · ⌘D opheffen · ⇧⌘I omkeren · ⌫ wissen · ⌘0 passend · ⌘1 100% · ⌘+ ⌘− zoomen · bij transformeren: pijltjes verplaatsen (⇧ = 10), Enter klaar, Esc annuleren</p>
           <p><b>Foutlog</b></p>
           <p>Gaat er iets mis, dan komt het hier terecht: <span id="foutlogInfo">geen meldingen</span>.
             <button class="knop" id="kFoutlogDelen">Foutlog delen</button> <button class="knop" id="kFoutlogWissen">Wissen</button></p>
@@ -574,7 +580,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '1.2';
+const APP_VERSIE = '1.3';
 const APP_NAAM = 'PAINT 3K';
 
 const BAYER = (()=>{
@@ -913,11 +919,12 @@ function docNaarScherm(x, y){
 }
 function passend(){
   if(!doc) return;
-  const marge = 28;
-  const s = Math.min((doekB-2*marge)/doc.w, (doekH-2*marge)/doc.h);
+  const weg = document.body.classList.contains('uiWeg'), marge = 28, zij = weg ? marge : 72, onder = weg ? marge : 44;
+  const links = inst.zijbalkLinks ? zij : marge, rechts = inst.zijbalkLinks ? marge : zij;
+  const s = Math.min((doekB-links-rechts)/doc.w, (doekH-marge-onder)/doc.h);
   zicht.schaal = Math.max(0.02, s);
-  zicht.offx = (doekB - doc.w*zicht.schaal)/2;
-  zicht.offy = (doekH - doc.h*zicht.schaal)/2;
+  zicht.offx = links + (doekB-links-rechts - doc.w*zicht.schaal)/2;
+  zicht.offy = marge + (doekH-marge-onder - doc.h*zicht.schaal)/2;
   vraagTeken();
 }
 function zetZoom(s, mx, my){
@@ -1938,6 +1945,7 @@ function undoWis(){ undoLijst = []; redoLijst = []; undoBytes = 0; redoBytes = 0
 function pasToe(e, kant){
   const voor = kant==='voor';
   markeerLagen(e);
+  if(e.vullingenVoor) doc.vullingen = (voor ? e.vullingenVoor : e.vullingenNa).slice();
   switch(e.type){
     case 'pixels': {
       const vals = voor ? e.oud : e.nieuw;
@@ -2066,7 +2074,6 @@ function paletOpgeruimd(){
   const n = doc.palet.length;
   if(doc.kleur >= n) doc.kleur = n-1;
   doc.patronen.forEach(p=>{ for(let i=0;i<64;i++) if(p[i]!==LEEG && p[i]>=n) p[i]=LEEG; });
-  doc.trios = (doc.trios||[]).filter(t=>t.every(k=>k<n));
 }
 function herindexeer(map, nieuwPalet){
   for(const L of doc.lagen){
@@ -2074,7 +2081,6 @@ function herindexeer(map, nieuwPalet){
     for(let i=0;i<d.length;i++){ const v=d[i]; if(v!==LEEG) d[i]=map[v]; }
   }
   doc.patronen.forEach(p=>{ for(let i=0;i<64;i++) if(p[i]!==LEEG) p[i]=map[p[i]]; });
-  doc.trios = (doc.trios||[]).map(t=>t.map(k=>map[k]));
   (doc.verlopen||[]).forEach(v=>{ v.kleuren = v.kleuren.map(k=>map[k]); });
   (doc.vullingen||[]).forEach(v=>{ v.kleuren = v.kleuren.map(k=>map[k]); });
   doc.kleur = map[doc.kleur];
@@ -2565,7 +2571,7 @@ const wijzers = new Map();      // pointerId → {x, y, type}
 let haal = null;                // de lopende handeling
 let knijp = null;               // twee-vinger zoom/schuif
 let multiTik = null;            // kandidaat twee-/drie-/viervinger-tik
-let penGezien = false;
+let penGezien = localStorage.getItem('p3k_pen')==='1';   // eenmaal een Pencil gezien = onthouden
 let drukTimer = null, snapTimer = null, spuitTimer = null;
 let spatie = false;             // spatiebalk = schuiven met de muis
 let vorigeTool = 'stift';
@@ -2597,7 +2603,7 @@ weergave.addEventListener('pointerdown', e=>{
   try{ weergave.setPointerCapture(e.pointerId); }catch(err){  }
   const [px,py] = schermPos(e);
   if(e.pointerType==='pen' && !penGezien){
-    penGezien = true;
+    penGezien = true; try{ localStorage.setItem('p3k_pen', '1'); }catch(err){}
     if(inst.vingerTekent==='auto') toast('Pencil gezien: vingers schuiven en zoomen nu');
   }
   wijzers.set(e.pointerId, {x:px, y:py, type:e.pointerType});
@@ -2623,7 +2629,10 @@ weergave.addEventListener('pointerdown', e=>{
     if(e.pointerType==='pen'){ knijp = null; multiTik = null; }   // Pencil gaat vóór rustende vingers
     else return;
   }
-  if(haal && haal.id !== e.pointerId) haalCommit();   // wees-haal eerst netjes afronden
+  if(haal && haal.id !== e.pointerId){
+    if(e.pointerType==='pen' && haal.type==='touch') haalAfbreken();   // dat was een handpalm: weg ermee
+    else haalCommit();                                                  // wees-haal eerst netjes afronden
+  }
 
   const vinger = e.pointerType==='touch';
   if((vinger && !magVingerTekenen()) || (e.pointerType==='mouse' && (e.button===1 || spatie)) || inst.tool==='hand'){
@@ -2743,7 +2752,7 @@ function startVul(e, px, py){
     if(!regio){ if(regels.masker) toast('Dit punt ligt buiten de selectie'); return; }
     const bb = regio.bb;
     haal = {soort:'verloopvul', type:e.pointerType, id:e.pointerId, laag:L, sx:x, sy:y, vx:x, vy:y,
-            masker:regio.m, mbbox:bb, kleuren: verloopKleuren(), previewNodig:false, zout:(Math.random()*0x7fffffff)|0,
+            masker:regio.m, mbbox:bb, kleuren: verloopKleuren(), previewNodig:false, zout:(Math.random()*0x7fffffff)|0, vulVoor:(doc.vullingen||[]).slice(),
             klein: (bb.x1-bb.x0+1)*(bb.y1-bb.y0+1) <= 2.5e6};
     if(haal.klein) verloopVulTeken(haal, x, y, false);
     else toast('Groot vlak: het verloop verschijnt zodra je loslaat — de pijl toont richting en lengte');
@@ -2751,11 +2760,16 @@ function startVul(e, px, py){
     return;
   }
   let gelukt = false;
+  const vulVoor = (doc.vullingen||[]).slice();
   for(const [qx,qy] of spiegelPunten(x, y)){
     const ok = (soort==='glitter') ? glitterVul(qx, qy, doc.kleur, o) : emmerVul(qx, qy, doc.kleur, o);
     gelukt = gelukt || ok;
   }
-  if(gelukt){ undoPush(diffUitBbox(L, strokeKopie, strokeBbox)); maakVuilRect(strokeBbox); vraagTeken(); bouwLagenThumbStraks(); }
+  if(gelukt){
+    const stap = diffUitBbox(L, strokeKopie, strokeBbox);
+    if(stap){ stap.vullingenVoor = vulVoor; stap.vullingenNa = (doc.vullingen||[]).slice(); }
+    undoPush(stap); maakVuilRect(strokeBbox); vraagTeken(); bouwLagenThumbStraks();
+  }
   else if(regels.masker && !selMask[y*doc.w+x]) toast('Dit punt ligt buiten de selectie — tik Opheffen om de selectie los te laten');
   else if(regels.slot) toast('Alpha-slot staat aan: deze laag vult alleen waar al iets staat');
 }
@@ -2843,6 +2857,7 @@ weergave.addEventListener('pointermove', e=>{
   }
   if(!haal || haal.id !== e.pointerId) return;
   const h = haal;
+  if(drukTimer && h.startPX !== undefined && Math.hypot(px-h.startPX, py-h.startPY) > 9){ clearTimeout(drukTimer); drukTimer = null; }
 
   if(h.soort==='pan'){
     zicht.offx += px - h.x; zicht.offy += py - h.y;
@@ -2886,7 +2901,6 @@ weergave.addEventListener('pointermove', e=>{
     }
     vraagTeken(); return;
   }
-  if(drukTimer && Math.hypot(px-h.startPX, py-h.startPY) > 9){ clearTimeout(drukTimer); drukTimer = null; }
   
   if(Math.hypot(px-h.stilX, py-h.stilY) > 5){ h.stil = performance.now(); h.stilX = px; h.stilY = py; }
   const stappen = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
@@ -2980,8 +2994,10 @@ function haalCommit(){
   else if(h.soort==='sel'){ selVoltooi(h); }
   else if(h.soort==='verloopvul'){
     verloopVulTeken(h, h.vx, h.vy, true);
-    undoPush(diffUitBbox(h.laag, strokeKopie, strokeBbox));
+    const stap = diffUitBbox(h.laag, strokeKopie, strokeBbox);
     vulGeheugenBewaar(h.kleuren, h.masker, h.mbbox);
+    if(stap){ stap.vullingenVoor = h.vulVoor; stap.vullingenNa = (doc.vullingen||[]).slice(); }
+    undoPush(stap);
     maakVuilRect(strokeBbox);
     bouwLagenThumbStraks();
   }else if(h.soort==='haal' || h.soort==='vorm'){
@@ -3209,6 +3225,7 @@ function bouwStalen(){
     const b = maak('button', 'staal'+(i===doc.kleur?' actief':'')+(i===0?' doek':'')+(isLicht(hex)?'':' donker'));
     b.style.background = hex;
     b.title = i===0 ? 'doek (achtergrondkleur)' : 'kleur '+i;
+    if(i>0) b.appendChild(maak('small', 'nr', String(i)));      // het kleurnummer is het belangrijkste gegeven: altijd zichtbaar
     b.addEventListener('click', ()=>{
       if(doc.kleur===i){ paneelToggle('kleur'); return; }
       if(paneelActief && paneelActief!=='kleur') paneelSluit();
@@ -3284,7 +3301,6 @@ function herindexMetKopie(map, nieuwPalet){
     (doc.vullingen||[]).forEach(v=>{ v.kleuren = [...new Set(v.kleuren.map(k=>map[k]))]; });
     const na = {verlopen:(doc.verlopen||[]).map(v=>({kleuren:v.kleuren.slice()})), vulKleuren:(doc.vullingen||[]).map(v=>v.kleuren.slice())};
     undoPush({type:'verlopen', voor, na, bytes:256});
-    doc.trios = [];
     paletActie(nieuwPalet);
   });
 }
@@ -3327,7 +3343,7 @@ function kpStalenBij(){
   doc.palet.forEach((hex, i)=>{
     const b = maak('button', 'kpStaal'+(i===doc.kleur?' actief':'')+(isLicht(hex)?'':' donker'));
     b.style.background = hex;
-    if(i===0) b.appendChild(maak('small', '', 'doek'));
+    b.appendChild(maak('small', i===0 ? '' : 'nr', i===0 ? 'doek' : String(i)));
     b.addEventListener('click', ()=>{ doc.kleur = i; bouwStalen(); knoppenBij(); kpToon(); });
     vak.appendChild(b);
   });
@@ -3564,10 +3580,14 @@ function laagVerschuif(richting){
   lagenActie(()=>{ const t = doc.lagen[i]; doc.lagen[i] = doc.lagen[j]; doc.lagen[j] = t; doc.actief = j; });
 }
 
-function laagMerge(){
+async function laagMerge(){
   if(doc.actief===0) return;
   rondAf();
   const B = actieveLaag(), O = doc.lagen[doc.actief-1];
+  if(!B.zicht || !O.zicht){
+    const naam = !B.zicht ? B.naam : O.naam;
+    if(!(await bevestig('Laag "'+naam+'" is verborgen; bij samenvoegen gaat haar inhoud verloren. Toch samenvoegen?', 'Samenvoegen'))) return;
+  }
   const w = doc.w, n = w*doc.h, data = new Uint8Array(n).fill(LEEG);
   for(let i=0;i<n;i++){
     const x = i % w, br = (((i/w)|0)&7)<<3;
@@ -3866,7 +3886,7 @@ el('kRefWeg').addEventListener('click', ()=>{ if(!doc.ref) return; const voor = 
 el('kExport').addEventListener('click', ()=>{ paneelSluit(); exportDialoog(); });
 el('zijbalkKant').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.zijbalkLinks = b.dataset.kant==='links'; bewaarInst(); actiesBij(); knoppenBij(); });
 el('vingerKeuze').addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return; inst.vingerTekent = b.dataset.v; bewaarInst(); actiesBij(); });
-schakel('schGarenbalk', 'kleurenbalk', knoppenBij);
+schakel('schGarenbalk', 'garenbalk', knoppenBij);
 schakel('schVierVingers', 'vierVingers');
 function uiToggle(){
   const weg = document.body.classList.toggle('uiWeg');
@@ -4076,7 +4096,9 @@ function garensDialoog(){
     tab.appendChild(tr);
   });
   const vak = maak('div');
-  vak.appendChild(maak('div','uitleg', rijen.filter(r=>r.n).length+' van '+doc.palet.length+' kleuren in gebruik · '+nlGetal(doc.w/doc.pxcm,0)+' × '+nlGetal(doc.h/doc.pxcm,0)+' cm = '+nlGetal(tot*cm2/10000,2)+' m²'));
+  const inGebruik = rijen.filter(r=>r.n).length;
+  vak.appendChild(maak('div','uitleg', inGebruik+' van '+doc.palet.length+' kleuren in gebruik · '+nlGetal(doc.w/doc.pxcm,0)+' × '+nlGetal(doc.h/doc.pxcm,0)+' cm = '+nlGetal(tot*cm2/10000,2)+' m²'));
+  if(inGebruik > WEEF_KLEUREN) vak.appendChild(maak('div','uitleg let', 'Meer dan '+WEEF_KLEUREN+' kleuren in gebruik: het TextielLab weeft er hooguit '+WEEF_KLEUREN+' in één kleed.'));
   vak.appendChild(tab);
   dialoogOpen('Kleurtelling', vak, [{tekst:'Sluiten', primair:true}]);
 }
@@ -4357,7 +4379,7 @@ function docNaarRecord(d, lagen){
   return {
     id:d.id, naam:d.naam, w:d.w, h:d.h, pxcm:d.pxcm, palet:d.palet.slice(), actief:d.actief, kleur:d.kleur,
     lagen: lagen || d.lagen.map(laagRecord),
-    patronen: d.patronen.map(p=>Array.from(p)), trios: d.trios||[],
+    patronen: d.patronen.map(p=>Array.from(p)),
     verlopen: (d.verlopen||[]).map(v=>({kleuren:(v.kleuren||[]).slice()})), verloopActief: d.verloopActief||0, refLaag: d.refLaag||null,
     vullingen: (d.vullingen||[]).map(v=>({laag:v.laag, kleuren:v.kleuren, x0:v.x0, y0:v.y0, x1:v.x1, y1:v.y1, rle:v.rle})),
     ref: d.ref ? {blob:d.ref.blob, dek:d.ref.dek, zicht:d.ref.zicht} : null,
@@ -4381,7 +4403,6 @@ function recordNaarDoc(r){
   d.kleur = klem(r.kleur===undefined ? 1 : r.kleur, 0, d.palet.length-1);
   d.patronen = (r.patronen||[]).map(p=>Uint8Array.from(p));
   while(d.patronen.length<3) d.patronen.push(new Uint8Array(64).fill(LEEG));
-  d.trios = r.trios||[];
   d.verlopen = (r.verlopen && r.verlopen.length) ? r.verlopen.map(v=>({kleuren:(v.kleuren||[]).filter(k=>k<d.palet.length)})) : [{kleuren:(r.verloop||[]).filter(k=>k<d.palet.length)}];
   d.verloopActief = r.verloopActief||0;
   d.refLaag = (r.refLaag && d.lagen.some(l=>l.id===r.refLaag)) ? r.refLaag : null;
@@ -4525,7 +4546,7 @@ function kaartMenu(it){
     ['Openen', ()=>openDocId(it.id)],
     ['Hernoem…', async ()=>{ const n = await vraagTekst('Naam van het kleed', it.naam); if(n) await docHernoem(it.id, n); galerijToon(); }],
     ['Dupliceer', async ()=>{ await docDupliceer(it.id); galerijToon(); }],
-    ['Exporteer projectbestand', async ()=>{ const r = await dbDoe('docs','readonly', s=>s.get(it.id)); if(r) exportKlaarDialoog(new Blob([projectJson(recordNaarDoc(r))], {type:'application/json'}), veiligeNaam(it.naam)+'.weefstudio.json', 'Projectbestand van "'+it.naam+'" staat klaar.'); }],
+    ['Exporteer projectbestand', async ()=>{ const r = await dbDoe('docs','readonly', s=>s.get(it.id)); if(r) exportKlaarDialoog(new Blob([projectJson(recordNaarDoc(r))], {type:'application/json'}), veiligeNaam(it.naam)+'.paint3k.json', 'Projectbestand van "'+it.naam+'" staat klaar.'); }],
     ['Verwijder', async ()=>{ if(await bevestig('"'+it.naam+'" definitief verwijderen?', 'Verwijder')){ await docVerwijder(it.id); galerijToon(); } }, true],
   ];
   for(const [tekst, fn, gevaar] of items){
@@ -4599,7 +4620,6 @@ async function migreerOud(){
         d.actief = klem(o.actief===undefined ? d.lagen.length-1 : o.actief, 0, d.lagen.length-1);
         d.kleur = klem(o.kleur||1, 0, d.palet.length-1);
         if(o.patronen && o.patronen.length===3) d.patronen = o.patronen.map(p=>Uint8Array.from(p));
-        d.trios = o.trios||[];
         d.gemaakt = it.tijd; d.gewijzigd = it.tijd;
         await bewaarDocRecord(d);
         n++;
@@ -4651,7 +4671,6 @@ function projectJson(d){
     w:d.w, h:d.h, pxcm:d.pxcm, naam:d.naam, palet:d.palet,
     lagen: d.lagen.map(l=>({naam:l.naam, zicht:l.zicht, dek:l.dek, slot:!!l.slot, rle:b64(rleCodeer(l.data))})),
     patronen: d.patronen.map(p=>b64(p)),
-    trios: d.trios||[],
     verlopen: (d.verlopen||[]).map(v=>({kleuren:v.kleuren})), verloopActief: d.verloopActief||0,
     refLaagIndex: d.lagen.findIndex(l=>l.id===d.refLaag),
     vullingen: (d.vullingen||[]).map(v=>({laagIndex:d.lagen.findIndex(l=>l.id===v.laag), kleuren:v.kleuren, x0:v.x0, y0:v.y0, x1:v.x1, y1:v.y1, rle:b64(v.rle)})).filter(v=>v.laagIndex>=0),
@@ -4672,7 +4691,7 @@ el('bestandInvoer').addEventListener('change', ()=>{
   if(!f) return;
   if(bestandModus==='font'){ bestandModus = null; laadFontBestand(f); return; }
   if(f.type==='application/json' || /\.json$/i.test(f.name)){ importProjectBestand(f); return; }
-  importGeindexeerd(f).then(gedaan=>{ if(!gedaan) importAfbeeldingBestand(f); }).catch(()=>importAfbeeldingBestand(f));
+  importGeindexeerd(f).then(r=>{ if(r!==true) importAfbeeldingBestand(f, r && r.pxcm); }).catch(()=>importAfbeeldingBestand(f));
 });
 
 async function importGeindexeerd(f){
@@ -4680,7 +4699,7 @@ async function importGeindexeerd(f){
   let info, idx = null;
   if(isPng(bytes)){
     info = leesPng(bytes);
-    if(info.kleurtype!==3 || info.interlace || !info.plte || !window.DecompressionStream) return false;
+    if(info.kleurtype!==3 || info.interlace || !info.plte || !window.DecompressionStream) return {pxcm: pngPxcmPlausibel(info)};   // RGB-PNG: wel de maat meegeven
   }else{
     const b = leesBmp(bytes);
     if(!b) return false;
@@ -4696,30 +4715,31 @@ async function importGeindexeerd(f){
   else await importIndexAlsNieuw(info, idx, naamUitBestand(f));
   return true;
 }
-function importAfbeeldingBestand(f){
+function importAfbeeldingBestand(f, pxcmHint){
   laadAfbeelding(f).then(img=>{
     let modus = bestandModus;
     if(!doc) modus = 'nieuw';
     if(modus==='import' || modus==='project') modus = doc ? 'laag' : 'nieuw';
     if(modus==='ref') zetRef(f);
     else if(modus==='laag') importAlsLaag(img);
-    else importAlsNieuw(img, naamUitBestand(f));
+    else importAlsNieuw(img, naamUitBestand(f), pxcmHint);
   }).catch(()=>toast('Dit bestand kan niet als afbeelding geopend worden'));
 }
 function naamUitBestand(f){
-  return f.name.replace(/\.[^.]+$/, '').replace(/(_sel)?_\d+x\d+$/, '').replace(/_(garen|kleur)\d\d_[0-9a-f]{6}$/, '') || 'import';
+  return f.name.replace(/\.[^.]+$/, '').replace(/\.(weefstudio|paint3k)$/, '').replace(/(_sel)?_\d+x\d+$/, '').replace(/_(garen|kleur)\d\d_[0-9a-f]{6}$/, '') || 'import';
 }
 function pngDoorzichtig(info){
   const t = new Uint8Array(256);
   if(info.trns) for(let i=0;i<info.trns.length && i<256;i++) if(info.trns[i]===0) t[i] = 1;
   return t;
 }
-function pngPxcm(info){
+function pngPxcmPlausibel(info){
   if(info.ws && info.ws.pxcm>=1 && info.ws.pxcm<=100) return info.ws.pxcm;
   const ppm = info.pxcm ? Math.round(info.pxcm*100) : 0;
   if(ppm && ppm!==2835 && ppm!==3780 && info.pxcm>=4 && info.pxcm<=40) return Math.round(info.pxcm*100)/100;   // 2835/3780 = 72/96 dpi: schermwaarden, geen weefmaat
-  return doc ? doc.pxcm : PXCM_STANDAARD;
+  return null;
 }
+function pngPxcm(info){ return pngPxcmPlausibel(info) || (doc ? doc.pxcm : PXCM_STANDAARD); }
 async function importIndexAlsNieuw(info, idx, naam){
   const plte = info.plte, door = pngDoorzichtig(info), w = info.w, h = info.h;
   const gebruikt = new Uint8Array(256);
@@ -4813,25 +4833,40 @@ function dichtstbijPerBak(r, g, b, pRgb, bakCache){
   }
   return idx;
 }
-async function importAlsNieuw(img, naam){
-  const pxcm = doc ? doc.pxcm : PXCM_STANDAARD;
+async function importAlsNieuw(img, naam, pxcmHint){
+  const pxcm = pxcmHint || (doc ? doc.pxcm : PXCM_STANDAARD);
   const {w, h, px} = afbeeldingPixels(img, MAX_ZIJDE, MAX_ZIJDE, MAX_PX);
-  const tel = new Uint32Array(32768), voorbeeld = new Int32Array(32768).fill(-1);
+  const exact = new Map(); let teVeel = false;
   for(let i=0;i<w*h;i++){
-    const r2=px[i*4], g2=px[i*4+1], b2=px[i*4+2];
-    const bak = ((r2>>3)<<10)|((g2>>3)<<5)|(b2>>3);
-    tel[bak]++;
-    if(voorbeeld[bak] < 0) voorbeeld[bak] = (r2<<16)|(g2<<8)|b2;
+    const s = (px[i*4]<<16)|(px[i*4+1]<<8)|px[i*4+2], n = exact.get(s);
+    if(n!==undefined) exact.set(s, n+1);
+    else { if(exact.size >= MAX_KLEUREN){ teVeel = true; break; } exact.set(s, 1); }
   }
-  const bakken = [];
-  for(let b2=0;b2<32768;b2++) if(tel[b2]) bakken.push(b2);
-  bakken.sort((a,b)=>tel[b]-tel[a]);
-  const top = bakken.slice(0, MAX_KLEUREN).map(b2=>voorbeeld[b2]);
-  const palet = top.map(s=>'#'+s.toString(16).padStart(6,'0'));
-  const pRgb = top.map(s=>[(s>>16)&255,(s>>8)&255,s&255]);
-  const bakCache = new Int16Array(32768).fill(-1);
-  const data = new Uint8Array(w*h);
-  for(let i=0;i<w*h;i++) data[i] = dichtstbijPerBak(px[i*4], px[i*4+1], px[i*4+2], pRgb, bakCache);
+  let palet, data;
+  if(!teVeel){
+    const kleuren = [...exact.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);   // meest gebruikte voorop
+    palet = kleuren.map(s=>'#'+s.toString(16).padStart(6,'0'));
+    const index = new Map(kleuren.map((s,i)=>[s,i]));
+    data = new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++) data[i] = index.get((px[i*4]<<16)|(px[i*4+1]<<8)|px[i*4+2]);
+  }else{
+    const tel = new Uint32Array(32768), voorbeeld = new Int32Array(32768).fill(-1);
+    for(let i=0;i<w*h;i++){
+      const r2=px[i*4], g2=px[i*4+1], b2=px[i*4+2];
+      const bak = ((r2>>3)<<10)|((g2>>3)<<5)|(b2>>3);
+      tel[bak]++;
+      if(voorbeeld[bak] < 0) voorbeeld[bak] = (r2<<16)|(g2<<8)|b2;
+    }
+    const bakken = [];
+    for(let b2=0;b2<32768;b2++) if(tel[b2]) bakken.push(b2);
+    bakken.sort((a,b)=>tel[b]-tel[a]);
+    const top = bakken.slice(0, MAX_KLEUREN).map(b2=>voorbeeld[b2]);
+    palet = top.map(s=>'#'+s.toString(16).padStart(6,'0'));
+    const pRgb = top.map(s=>[(s>>16)&255,(s>>8)&255,s&255]);
+    const bakCache = new Int16Array(32768).fill(-1);
+    data = new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++) data[i] = dichtstbijPerBak(px[i*4], px[i*4+1], px[i*4+2], pRgb, bakCache);
+  }
   while(palet.length<2) palet.push('#1a1a1a');
   if(doc) await bewaarNu(true);
   const d = nieuwDoc(w, h, pxcm, palet, naam||'import');
@@ -4839,7 +4874,7 @@ async function importAlsNieuw(img, naam){
   d.actief = 1;
   zetDoc(d);
   bewaarNu();
-  toast('Geïmporteerd met '+palet.length+' kleuren');
+  toast('Geïmporteerd met '+palet.length+' kleuren'+(teVeel ? ' (meer dan '+MAX_KLEUREN+' in het bestand: de meest gebruikte, de rest naar de dichtstbijzijnde)' : ''));
 }
 function importAlsLaag(img){
   if(doc.lagen.length >= maxLagen()){ toast('Maximaal '+maxLagen()+' lagen bij dit formaat'); return; }
@@ -4888,7 +4923,6 @@ function projectNaarDoc(o, naam){
     d.actief = d.lagen.length-1;
     if(o.patronen) d.patronen = o.patronen.map(p=>{ const a = new Uint8Array(64).fill(LEEG); const raw = unb64(p); a.set(raw.subarray(0,64)); return a; });
     while(d.patronen.length<3) d.patronen.push(new Uint8Array(64).fill(LEEG));
-    d.trios = o.trios||[];
     d.verlopen = (o.verlopen && o.verlopen.length) ? o.verlopen.map(v=>({kleuren:(v.kleuren||[]).filter(k=>k<d.palet.length)})) : [{kleuren:(o.verloop||[]).filter(k=>k<d.palet.length)}];
     d.verloopActief = o.verloopActief||0;
     d.refLaag = (o.refLaagIndex>=0 && d.lagen[o.refLaagIndex]) ? d.lagen[o.refLaagIndex].id : null;
@@ -5422,14 +5456,14 @@ async function exportGetouw(o, r, naam, voortgang, geannuleerd){
 }
 
 const EXPORT_FORMATEN = [
-  {id:'pngidx',  naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'kleurnummers en maat in cm zitten in het bestand; per laag of per kleur doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
-  {id:'pngrgb',  naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
-  {id:'bmp',     naam:'BMP 8 bits',                       uitleg:'geïndexeerd zonder compressie, voor weefsoftware die geen PNG leest', wat:['kleed','selectie'], maat:false},
-  {id:'svg',     naam:'SVG (vectoren per kleur)',         uitleg:'voor snijden (vinyl, laser) en drukwerk; per kleur een pad, exact langs de rasterpunten', wat:['kleed','selectie','garen'], maat:false},
-  {id:'pdf',     naam:'PDF op ware grootte',              uitleg:'om te printen of te plotten; schaal 1:1, 1:2, 1:5 of 1:10, blokken blijven scherp', wat:['kleed','selectie'], maat:'schaal'},
-  {id:'kleurenlijst', naam:'Kleurenlijst (CSV, JSON, GPL)',   uitleg:'per kleur het aantal punten, procent en cm²; zit ook in elke zip',    wat:['kleed','selectie'], maat:false},
-  {id:'project', naam:'Projectbestand (.weefstudio.json)', uitleg:'alles, met lagen en kleuren; later weer te openen',           wat:['kleed'], maat:false},
-  {id:'reserve', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
+  {id:'pngidx',  groep:'Voor het getouw', naam:'PNG geïndexeerd (voor het TextielLab)', uitleg:'kleurnummers en maat in cm zitten in het bestand; per laag of per kleur doorzichtig', wat:['kleed','selectie','lagen','garen'], maat:false},
+  {id:'pngrgb',  groep:'Beeld, snijden en drukken', naam:'PNG (RGB)',                        uitleg:'gewone afbeelding van wat je ziet; per laag doorzichtig',  wat:['kleed','selectie','lagen'], maat:true},
+  {id:'bmp',     groep:'Voor het getouw', naam:'BMP 8 bits',                       uitleg:'geïndexeerd zonder compressie, voor weefsoftware die geen PNG leest', wat:['kleed','selectie'], maat:false},
+  {id:'svg',     groep:'Beeld, snijden en drukken', naam:'SVG (vectoren per kleur)',         uitleg:'voor snijden (vinyl, laser) en drukwerk; per kleur een pad, exact langs de rasterpunten', wat:['kleed','selectie','garen'], maat:false},
+  {id:'pdf',     groep:'Beeld, snijden en drukken', naam:'PDF op ware grootte',              uitleg:'om te printen of te plotten; schaal 1:1, 1:2, 1:5 of 1:10, blokken blijven scherp', wat:['kleed','selectie'], maat:'schaal'},
+  {id:'kleurenlijst', groep:'Bewaren', naam:'Kleurenlijst (CSV, JSON, GPL)',   uitleg:'per kleur het aantal punten, procent en cm²; zit ook in elke zip',    wat:['kleed','selectie'], maat:false},
+  {id:'project', groep:'Bewaren', naam:'Projectbestand (.paint3k.json)', uitleg:'alles, met lagen en kleuren; later weer te openen',           wat:['kleed'], maat:false},
+  {id:'reserve', groep:'Bewaren', naam:'Reservekopie van álle kleden',     uitleg:'alle kleden uit de galerij in één bestand',                  wat:['kleed'], maat:false},
 ];
 const EXPORT_WAT = [['kleed','hele kleed'],['selectie','selectie'],['lagen','per laag'],['garen','per kleur']];
 const exportKeuze = {wat:'kleed', formaat:'pngidx', blok:1, schaal:1, naam:'', garenZwart:false, metDoek:false, svgDoek:true,
@@ -5440,7 +5474,7 @@ async function exportMaak(o, voortgang, geannuleerd){
   const naam = veiligeNaam(o.naam || doc.naam);
   if(o.formaat==='project'){
     await voortgang(0.5);
-    return {blob:new Blob([projectJson(doc)], {type:'application/json'}), naam:naam+'.weefstudio.json'};
+    return {blob:new Blob([projectJson(doc)], {type:'application/json'}), naam:naam+'.paint3k.json'};
   }
   if(o.formaat==='reserve') return maakReservekopie(voortgang, geannuleerd);
   const r = exportRect(o.wat), blok = o.maat===true ? o.blok : 1;
@@ -5561,7 +5595,7 @@ async function maakReservekopie(voortgang, geannuleerd){
   }
   if(!kleden.length) throw new Error('Geen kleden om te bewaren');
   const datum = new Date().toISOString().slice(0,10);
-  return {blob:new Blob([JSON.stringify({app:'weefstudio-reservekopie', versie:2, datum, kleden})], {type:'application/json'}), naam:'weefstudio-reservekopie-'+datum+'.json', aantal:kleden.length};
+  return {blob:new Blob([JSON.stringify({app:'weefstudio-reservekopie', versie:2, datum, kleden})], {type:'application/json'}), naam:'paint3k-reservekopie-'+datum+'.json', aantal:kleden.length};
 }
 function mimeVoor(naam){
   if(/\.png$/i.test(naam)) return 'image/png';
@@ -5583,7 +5617,7 @@ function exportDialoog(){
   const vak = maak('div');
   const watRij = maak('div', 'rij'), watSeg = maak('div', 'seg klein');
   watRij.append(maak('span', 'rijlabel', 'wat'), watSeg);
-  const formSeg = maak('div', 'seg kolom');
+  const formSeg = maak('div');
   const maatRij = maak('div', 'rij'), maatSeg = maak('div', 'seg klein');
   const blokIn = maak('input'); blokIn.type = 'number'; blokIn.min = 2; blokIn.max = 16; blokIn.value = Math.max(2, exportKeuze.blok);
   maatRij.append(maak('span', 'rijlabel', 'maat'), maatSeg, blokIn);
@@ -5593,7 +5627,7 @@ function exportDialoog(){
   const naamRij = maak('div', 'rij'); const naamIn = maak('input'); naamIn.type = 'text'; naamIn.value = exportKeuze.naam; naamIn.style.flex = '1';
   naamRij.append(maak('span', 'rijlabel', 'naam'), naamIn);
   if(!exportKeuze.pxcmX){ exportKeuze.pxcmX = doc.pxcm; exportKeuze.pxcmY = doc.pxcm; }
-  const getouwKop = maak('div', 'sectiekop', 'voor het getouw');
+  const getouwKop = maak('div', 'sectiekop', 'dichtheid en stroken');
   const getalIn = (v, min, max, stap, breedte)=>{ const i = maak('input'); i.type = 'number'; i.min = min; i.max = max; i.step = stap; i.value = v; i.style.width = breedte; return i; };
   const dichtRij = maak('div', 'rij'), dichtSeg = maak('div', 'seg klein'), dichtVak = maak('span'), methSeg = maak('div', 'seg klein');
   const pxXIn = getalIn(exportKeuze.pxcmX, 1, 100, 0.5, '64px'), pxYIn = getalIn(exportKeuze.pxcmY, 1, 100, 0.5, '64px');
@@ -5608,7 +5642,7 @@ function exportDialoog(){
   const voortgang = maak('div', 'voortgang'); voortgang.hidden = true; const balk = maak('i'); voortgang.appendChild(balk);
   const status = maak('div', 'uitleg'); status.hidden = true;
   const knoppen = maak('div', 'dialoogknoppen');
-  vak.append(watRij, maak('div','sectiekop','formaat'), formSeg, maatRij, optieRij, getouwKop, dichtRij, paneelRij, naamRij, info, voortgang, status, knoppen);
+  vak.append(watRij, formSeg, maatRij, optieRij, getouwKop, dichtRij, paneelRij, naamRij, info, voortgang, status, knoppen);
 
   const formaat = ()=>EXPORT_FORMATEN.find(f=>f.id===exportKeuze.formaat) || EXPORT_FORMATEN[0];
   const bouw = ()=>{
@@ -5622,11 +5656,17 @@ function exportDialoog(){
       watSeg.appendChild(b);
     });
     formSeg.innerHTML = '';
-    EXPORT_FORMATEN.forEach(ff=>{
-      const b = maak('button', ff.id===exportKeuze.formaat ? 'actief' : '');
-      b.appendChild(maak('b', '', ff.naam)); b.appendChild(maak('small', '', ff.uitleg));
-      b.addEventListener('click', ()=>{ exportKeuze.formaat = ff.id; bouw(); });
-      formSeg.appendChild(b);
+    const groepen = [...new Set(EXPORT_FORMATEN.map(ff=>ff.groep))];        // in volgorde van voorkomen
+    groepen.forEach(g=>{
+      formSeg.appendChild(maak('div', 'sectiekop', g));
+      const seg = maak('div', 'seg kolom');
+      EXPORT_FORMATEN.filter(ff=>ff.groep===g).forEach(ff=>{
+        const b = maak('button', ff.id===exportKeuze.formaat ? 'actief' : '');
+        b.appendChild(maak('b', '', ff.naam)); b.appendChild(maak('small', '', ff.uitleg));
+        b.addEventListener('click', ()=>{ exportKeuze.formaat = ff.id; bouw(); });
+        seg.appendChild(b);
+      });
+      formSeg.appendChild(seg);
     });
     maatRij.style.display = f.maat ? '' : 'none';
     maatSeg.innerHTML = '';
@@ -5693,8 +5733,8 @@ function exportDialoog(){
       paneelVak.style.display = exportKeuze.panelenAan ? '' : 'none';
     }
     const r = exportRect(exportKeuze.wat), blok = f.maat===true ? exportKeuze.blok : 1;
-    let tekst = '';
-    if(f.id==='project') tekst = 'Het hele kleed met lagen, kleuren en verlopen, als .weefstudio.json.';
+    let tekst = '', waarschuw = false;
+    if(f.id==='project') tekst = 'Het hele kleed met lagen, kleuren en verlopen, als .paint3k.json (oude .weefstudio.json-bestanden openen ook).';
     else if(f.id==='pdf'){
       const m = pdfPaginaMaat(r, exportKeuze.schaal);
       tekst = 'Pagina '+nlGetal(m.w/PT_PER_CM,1)+' × '+nlGetal(m.h/PT_PER_CM,1)+' cm (schaal 1:'+exportKeuze.schaal+(exportKeuze.schaal===1 ? ', ware grootte' : ', met marge en onderschrift')+') · '+doc.palet.length+' kleuren, blokken blijven scherp';
@@ -5723,10 +5763,17 @@ function exportDialoog(){
         const {panelen} = paneelIndeling(uw, pxX, exportKeuze.paneelCm, exportKeuze.overlapCm);
         tekst += ' · '+panelen.length+(panelen.length===1 ? ' strook' : ' stroken')+' in een zip: '+panelen.map(p=>nlGetal((p.x1-p.x0)/pxX,1)).join(' / ')+' cm breed, snijlijnen in de kleurenlijst';
       }
-      if(f.id==='pngidx' || f.id==='bmp') tekst += ' · '+doc.palet.length+' kleuren, '+(getouw && exportKeuze.dichtheidAan ? nlGetal(exportKeuze.pxcmX,1)+' × '+nlGetal(exportKeuze.pxcmY,1) : nlGetal(doc.pxcm,0))+' per cm in het bestand';
+      if(f.id==='pngidx' || f.id==='bmp'){
+        if(!telKleed) telKleed = garenTelling(exportRect('kleed'));
+        const gebruikt = garensInGebruik(exportKeuze.wat==='selectie' ? garenTelling(r) : telKleed, true).length;
+        tekst += ' · '+doc.palet.length+' kleuren in het palet (alle nummers gaan mee), '+gebruikt+' in gebruik, '+(getouw && exportKeuze.dichtheidAan ? nlGetal(exportKeuze.pxcmX,1)+' × '+nlGetal(exportKeuze.pxcmY,1) : nlGetal(doc.pxcm,0))+' per cm in het bestand';
+        waarschuw = gebruikt > WEEF_KLEUREN;
+        if(waarschuw) tekst += ' — meer dan '+WEEF_KLEUREN+' kleuren in gebruik: het TextielLab weeft er hooguit '+WEEF_KLEUREN+' in één kleed';
+      }
       if(f.id==='bmp' && !(getouw && exportKeuze.panelenAan)){ const bm = (getouw && exportKeuze.dichtheidAan) ? dichtheidMaat(r, exportKeuze.pxcmX, exportKeuze.pxcmY) : r; tekst += ' · '+maatTekstBestand(bmpGrootte(bm.w, bm.h, doc.palet.length)); }
     }
     info.textContent = tekst;
+    info.classList.toggle('let', waarschuw);
   };
   blokIn.addEventListener('change', ()=>{ exportKeuze.blok = klem(+blokIn.value||2, 2, 16); blokIn.value = exportKeuze.blok; bouw(); });
   pxXIn.addEventListener('change', ()=>{ exportKeuze.pxcmX = klem(+pxXIn.value||doc.pxcm, 1, 100); pxXIn.value = exportKeuze.pxcmX; bouw(); });
@@ -6214,6 +6261,56 @@ async function zelftest(){
       B.set(Bkopie); doc.vullingen = []; doc.actief = 1; maakVuilAlles(); verzekerComposiet();
       return r2 && r2.geheugen && n2===40*30 && terug;
     });
+    const wijzer = (type, cx, cy, o={})=>{
+      const x = doekLinks + zicht.offx + (cx+0.5)*zicht.schaal, y = doekBoven + zicht.offy + (cy+0.5)*zicht.schaal;
+      weergave.dispatchEvent(new PointerEvent(type, Object.assign({pointerId:11, pointerType:'mouse', isPrimary:true, clientX:x, clientY:y, button:0,
+        buttons:type==='pointerup' ? 0 : 1, pressure:type==='pointerup' ? 0 : 0.5, bubbles:true, cancelable:true}, o)));
+    };
+    const wacht = ms=>new Promise(r=>setTimeout(r, ms));
+    const instVoor = JSON.stringify(inst), zichtVoor = Object.assign({}, zicht);
+    const telVerschil = (L, voor)=>{ let n = 0; for(let i=0;i<L.data.length;i++) if(L.data[i]!==voor[i]) n++; return n; };
+    await test('Korte lijn, langzaam getekend: blijft staan en de kleur blijft (lang-drukken-pipet gaat uit)', async ()=>{
+      zicht.schaal = 20; zicht.offx = 100; zicht.offy = 100;
+      inst.tool = 'stift'; inst.stift = 'lijn'; inst.maat = 1; inst.spiegelX = false; inst.spiegelY = false; doc.kleur = 4; doc.actief = 1;
+      const L = actieveLaag(), voor = L.data.slice();
+      wijzer('pointerdown', 2, 2); await wacht(60);
+      wijzer('pointermove', 4, 2); await wacht(900);
+      wijzer('pointerup', 4, 2); await wacht(50);
+      const n = telVerschil(L, voor);
+      ongedaan();
+      return (n===3 && doc.kleur===4) || 'punten '+n+', kleur '+doc.kleur;
+    });
+    await test('Handpalm vóór de Pencil: de vingerhaal wordt afgebroken, niet afgerond', async ()=>{
+      const pv = penGezien; penGezien = false; inst.vingerTekent = 'auto'; inst.tool = 'stift'; inst.stift = 'potlood'; inst.maat = 2; doc.kleur = 2;
+      const L = actieveLaag(), voor = L.data.slice(), nUndo = undoLijst.length;
+      wijzer('pointerdown', 10, 10, {pointerType:'touch', pointerId:21}); wijzer('pointermove', 20, 12, {pointerType:'touch', pointerId:21});
+      wijzer('pointerdown', 30, 30, {pointerType:'pen', pointerId:22}); wijzer('pointermove', 34, 30, {pointerType:'pen', pointerId:22}); wijzer('pointerup', 34, 30, {pointerType:'pen', pointerId:22});
+      wijzer('pointerup', 20, 12, {pointerType:'touch', pointerId:21});
+      let palm = 0; for(let y=8;y<=14;y++) for(let x=8;x<=22;x++) if(L.data[y*64+x]!==voor[y*64+x]) palm++;
+      const pen = telVerschil(L, voor) - palm;
+      const onthouden = localStorage.getItem('p3k_pen')==='1';
+      while(undoLijst.length > nUndo) ongedaan();
+      penGezien = pv; if(!pv) localStorage.removeItem('p3k_pen');
+      return (palm===0 && pen>0 && onthouden) || 'palm '+palm+', pen '+pen+', onthouden '+onthouden;
+    });
+    await test('Ongedaan maken herstelt het vulgeheugen: emmer na undo vult weer het hele glittervlak', async ()=>{
+      const L = doc.lagen[2], kopie = L.data.slice(), vulVoor = doc.vullingen, dekVoor = L.dek; doc.vullingen = []; doc.actief = 2; L.dek = 64;
+      L.data.fill(LEEG); for(let y=5;y<40;y++) for(let x=40;x<60;x++) L.data[y*64+x] = 3;      // blok om te vullen
+      maakVuilAlles(); verzekerComposiet();
+      inst.tool = 'vul'; inst.vulSoort = 'glitter'; inst.vulZicht = true; inst.vulAaneen = true; inst.dek = 64; inst.maat = 2; doc.kleur = 1;
+      wijzer('pointerdown', 50, 20); wijzer('pointerup', 50, 20);
+      const glitterKleuren = new Set(); for(let y=5;y<40;y++) for(let x=40;x<60;x++) glitterKleuren.add(L.data[y*64+x]);
+      inst.vulSoort = 'emmer'; doc.kleur = 4;
+      wijzer('pointerdown', 50, 20); wijzer('pointerup', 50, 20);
+      let n1 = 0; for(let y=5;y<40;y++) for(let x=40;x<60;x++) if(L.data[y*64+x]===4) n1++;
+      ongedaan();
+      wijzer('pointerdown', 50, 20); wijzer('pointerup', 50, 20);
+      let n2 = 0; for(let y=5;y<40;y++) for(let x=40;x<60;x++) if(L.data[y*64+x]===4) n2++;
+      ongedaan(); ongedaan();
+      L.data.set(kopie); L.dek = dekVoor; doc.vullingen = vulVoor; maakVuilAlles(); verzekerComposiet();
+      return (glitterKleuren.size>=2 && n1===700 && n2===700) || 'glitterkleuren '+glitterKleuren.size+', eerste emmer '+n1+', na undo '+n2;
+    });
+    Object.assign(inst, JSON.parse(instVoor)); Object.assign(zicht, zichtVoor);
     await test('Vulgeheugen stopt bij wat er later overheen getekend is (lijn over achtergrondbanen)', async ()=>{
       const W = 64, H = 48, A = doc.lagen[0].data, B = doc.lagen[1].data, C = doc.lagen[2].data;
       const kopie = [A.slice(), B.slice(), C.slice()], dekB = doc.lagen[1].dek, dekC = doc.lagen[2].dek, actiefVoor = doc.actief, vulVoor = doc.vullingen;
@@ -6244,6 +6341,27 @@ async function zelftest(){
         A.set(kopie[0]); B.set(kopie[1]); C.set(kopie[2]); doc.lagen[1].dek = dekB; doc.lagen[2].dek = dekC; doc.actief = actiefVoor; doc.vullingen = vulVoor;
         maakVuilAlles(); verzekerComposiet();
       }
+    });
+    await test('RGB-import houdt bijna gelijke kleuren apart (hooguit 64 exact), en leest de maat uit pHYs', async ()=>{
+      const c = document.createElement('canvas'); c.width = 12; c.height = 6; const g = c.getContext('2d');
+      [['#f2ead8',0],['#f4ecda',4],['#1a1a1a',8]].forEach(([k,x])=>{ g.fillStyle = k; g.fillRect(x, 0, 4, 6); });
+      const img = new Image(); img.src = c.toDataURL('image/png'); await new Promise(r=>{ img.onload = r; });
+      const docVoor = doc;
+      await importAlsNieuw(img, 'rgbtest', 7);
+      const palet = doc.palet.slice().sort(), ok = palet.join()===['#1a1a1a','#f2ead8','#f4ecda'].join() && doc.pxcm===7 && doc.lagen[0].data[0]!==doc.lagen[0].data[5];
+      const uitslag = ok || 'palet '+palet.join()+' pxcm '+doc.pxcm;
+      zetDoc(docVoor);
+      return uitslag;
+    });
+    await test('Passend: het kleed schuift niet onder de zijbalk, en de kleurenbalk-instelling werkt', async ()=>{
+      const zv = Object.assign({}, zicht), zl = inst.zijbalkLinks; inst.zijbalkLinks = true;
+      passend(); const linksOk = zicht.offx >= 72 - 0.01;
+      inst.zijbalkLinks = false; passend(); const rechtsOk = zicht.offx + doc.w*zicht.schaal <= doekB - 72 + 0.01;
+      inst.zijbalkLinks = zl; Object.assign(zicht, zv);
+      const gb = inst.garenbalk, s = el('schGarenbalk'); s.checked = !gb; s.dispatchEvent(new Event('change'));
+      const schakelt = inst.garenbalk === !gb && el('garenbalk').hidden === gb;
+      s.checked = gb; s.dispatchEvent(new Event('change'));
+      return (linksOk && rechtsOk && schakelt) || 'links '+linksOk+' rechts '+rechtsOk+' schakelaar '+schakelt;
     });
     await test('Scrollwacht: een verschoven vaste lay-out gaat terug naar 0', async ()=>{
       const app = el('app'); document.body.scrollTop = 40; app.scrollTop = 30;
@@ -6335,7 +6453,7 @@ async function zelftest(){
       if(!n) return 'overgeslagen (lege galerij)';
       const r = await maakReservekopie(niets, nooit);
       const o = JSON.parse(await r.blob.text());
-      return o.app==='weefstudio-reservekopie' && o.kleden.length===n && r.naam.startsWith('weefstudio-reservekopie-');
+      return o.app==='weefstudio-reservekopie' && o.kleden.length===n && r.naam.startsWith('paint3k-reservekopie-');
     });
   }finally{
     opslagUit = false;
