@@ -574,7 +574,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '1.1';
+const APP_VERSIE = '1.2';
 const APP_NAAM = 'PAINT 3K';
 
 const BAYER = (()=>{
@@ -1694,35 +1694,59 @@ function vulMaskerOveral(x, y, zicht){
 const VULGEHEUGEN_MAX = 24;
 
 let vulScratch = null;      // één buffer voor het uitpakken van maskers (geen 16 MB per kandidaat)
-function vulGeheugenZoek(x, y){
-  const lijst = doc.vullingen||[], La = actieveLaag(), w = doc.w;
-  const sm = regels.masker;
-  if(!vulScratch || vulScratch.length!==w*doc.h) vulScratch = new Uint8Array(w*doc.h);
+
+function vulGeheugenZoek(x, y, aaneen){
+  const lijst = doc.vullingen||[], La = actieveLaag(), w = doc.w, h = doc.h;
+  const sm = regels.masker, p0 = y*w+x;
+  if(!vulScratch || vulScratch.length!==w*h) vulScratch = new Uint8Array(w*h);
   for(let i=lijst.length-1; i>=0; i--){
     const v = lijst[i];
     if(x<v.x0||x>v.x1||y<v.y0||y>v.y1) continue;
-    const Le = doc.lagen.find(l=>l.id===v.laag);
-    if(!Le) continue;
-    const m = rleDecodeer(v.rle, w*doc.h, vulScratch);
-    if(!m[y*w+x]) continue;
+    const li = doc.lagen.findIndex(l=>l.id===v.laag);
+    if(li<0) continue;
+    const Le = doc.lagen[li];
+    const m = rleDecodeer(v.rle, w*h, vulScratch);
+    if(!m[p0]) continue;
     const E = Le.data, A = (Le===La) ? null : La.data;
     const set = new Uint8Array(256);
     v.kleuren.forEach(k=>{ if(k<256) set[k]=1; });
-    if(!set[E[y*w+x]]) continue;              // het tikpunt zelf hoort er niet meer bij
+    if(!set[E[p0]]) continue;                 // het tikpunt zelf hoort er niet meer bij
+    const boven = doc.lagen.slice(li+1).filter(l=>l.zicht && l!==La && l.dek>0);
+    const hoort = j=>{
+      if(!m[j] || !set[E[j]] || (sm && !sm[j])) return false;
+      if(A){ const a = A[j]; if(a!==LEEG && !set[a]) return false; }
+      for(let b=0;b<boven.length;b++){
+        const L = boven[b], vv = L.data[j];
+        if(vv!==LEEG && !set[vv] && dektHier(L.dek, (((j/w)|0)&7)<<3, j%w)) return false;
+      }
+      return true;
+    };
+    if(!hoort(p0)) continue;
     let tot=0, ok=0;
-    const bb = bboxUit();
-    for(let yy=v.y0; yy<=v.y1; yy++){
-      const r = yy*w;
-      for(let xx=v.x0; xx<=v.x1; xx++){
-        const j = r+xx;
-        if(!m[j]) continue;
-        tot++;
-        if(set[E[j]] && (!sm || sm[j]) && (!A || A[j]===LEEG || set[A[j]])){ ok++; bboxVoeg(bb, xx, yy); }
-        else m[j] = 0;
+    for(let yy=v.y0; yy<=v.y1; yy++){ const r = yy*w; for(let xx=v.x0; xx<=v.x1; xx++){ const j = r+xx; if(!m[j]) continue; tot++; if(hoort(j)) ok++; } }
+    if(!ok || ok < tot*0.5) continue;
+    const uit = new Uint8Array(w*h), bb = bboxUit();
+    if(aaneen===false){
+      for(let yy=v.y0; yy<=v.y1; yy++){ const r = yy*w; for(let xx=v.x0; xx<=v.x1; xx++){ const j = r+xx; if(m[j] && hoort(j)){ uit[j] = 1; bboxVoeg(bb, xx, yy); } } }
+      return {m:uit, bb, geheugen:true};
+    }
+    const stapel = [p0]; uit[p0] = 1;
+    while(stapel.length){
+      const i0 = stapel.pop(), py = (i0/w)|0, rij = py*w;
+      let x0 = i0-rij, x1 = x0;
+      while(x0>0   && !uit[rij+x0-1] && hoort(rij+x0-1)){ x0--; uit[rij+x0] = 1; }
+      while(x1<w-1 && !uit[rij+x1+1] && hoort(rij+x1+1)){ x1++; uit[rij+x1] = 1; }
+      bboxVoeg(bb, x0, py); bboxVoeg(bb, x1, py);
+      for(let ny=py-1; ny<=py+1; ny+=2){
+        if(ny<0||ny>=h) continue;
+        const nrij = ny*w;
+        for(let xx=x0; xx<=x1; xx++){
+          const j = nrij+xx;
+          if(!uit[j] && hoort(j)){ uit[j] = 1; stapel.push(j); while(xx<x1 && !uit[nrij+xx+1] && hoort(nrij+xx+1)) xx++; }
+        }
       }
     }
-    if(!ok || ok < tot*0.5) continue;         // grotendeels overschilderd: vergeten
-    return {m, bb, geheugen:true};
+    return {m:uit, bb, geheugen:true};
   }
   return null;
 }
@@ -1744,7 +1768,7 @@ function vulGeheugenErf(N, bronnen){
 function vulRegio(x, y, o){
   const R = doc.refLaag ? doc.lagen.find(l=>l.id===doc.refLaag) : null;
   if(R){ const r = vulMaskerMet(R.data, x, y); if(r) r.ref = true; return r; }
-  const g = vulGeheugenZoek(x, y);
+  const g = vulGeheugenZoek(x, y, o.aaneen);
   if(g) return g;
   return (o.aaneen===false) ? vulMaskerOveral(x, y, o.zicht) : vulMasker(x, y, o.zicht);
 }
@@ -6189,6 +6213,37 @@ async function zelftest(){
       const terug = doc.lagen.length===3 && doc.lagen[1].data===B;
       B.set(Bkopie); doc.vullingen = []; doc.actief = 1; maakVuilAlles(); verzekerComposiet();
       return r2 && r2.geheugen && n2===40*30 && terug;
+    });
+    await test('Vulgeheugen stopt bij wat er later overheen getekend is (lijn over achtergrondbanen)', async ()=>{
+      const W = 64, H = 48, A = doc.lagen[0].data, B = doc.lagen[1].data, C = doc.lagen[2].data;
+      const kopie = [A.slice(), B.slice(), C.slice()], dekB = doc.lagen[1].dek, dekC = doc.lagen[2].dek, actiefVoor = doc.actief, vulVoor = doc.vullingen;
+      try{
+        const m = new Uint8Array(W*H).fill(1);
+        for(let y=0;y<H;y++) for(let x=0;x<W;x++) A[y*W+x] = x<21 ? 1 : x<43 ? 2 : 4;
+        B.fill(LEEG); C.fill(LEEG); doc.lagen[1].dek = 64; doc.lagen[2].dek = 64;
+        doc.actief = 0; doc.vullingen = []; vulGeheugenBewaar([1,2,4], m, {actief:true, x0:0, y0:0, x1:W-1, y1:H-1});
+        for(let x=10;x<=40;x++){ B[10*W+x] = 3; B[30*W+x] = 3; }
+        for(let y=10;y<=30;y++){ B[y*W+10] = 3; B[y*W+40] = 3; }
+        maakVuilAlles(); verzekerComposiet();
+        doc.actief = 2; strokeKopie.set(C);
+        const tel = r=>{ let n = 0; if(r) for(let i=0;i<r.m.length;i++) n += r.m[i]; return n; };
+        const binnen = vulRegio(20, 20, {zicht:true, aaneen:true});
+        if(!binnen || !binnen.geheugen || tel(binnen)!==29*19) return 'binnen: '+(binnen ? tel(binnen)+' punten' : 'geen vlak')+' (verwacht '+(29*19)+')';
+        if(binnen.m[5*W+5] || binnen.m[10*W+20]) return 'binnen lekt naar buiten of over de lijn';
+        const buiten = vulRegio(5, 5, {zicht:true, aaneen:true});
+        if(!buiten || tel(buiten)!==W*H - 31*21) return 'buiten: '+(buiten ? tel(buiten) : 'geen')+' (verwacht '+(W*H-31*21)+')';
+        const overal = vulRegio(20, 20, {zicht:true, aaneen:false});
+        if(!overal || tel(overal)!==W*H - (31*21 - 29*19)) return 'overal: '+(overal ? tel(overal) : 'geen');
+        C.set(B); B.fill(LEEG); maakVuilAlles(); verzekerComposiet(); strokeKopie.set(C);
+        const eigen = vulRegio(20, 20, {zicht:true, aaneen:true});
+        if(!eigen || tel(eigen)!==29*19) return 'eigen laag: '+(eigen ? tel(eigen) : 'geen');
+        C.fill(LEEG); maakVuilAlles(); verzekerComposiet(); strokeKopie.set(C);
+        const heel = vulRegio(20, 20, {zicht:true, aaneen:true});
+        return !!heel && tel(heel)===W*H;
+      }finally{
+        A.set(kopie[0]); B.set(kopie[1]); C.set(kopie[2]); doc.lagen[1].dek = dekB; doc.lagen[2].dek = dekC; doc.actief = actiefVoor; doc.vullingen = vulVoor;
+        maakVuilAlles(); verzekerComposiet();
+      }
     });
     await test('Scrollwacht: een verschoven vaste lay-out gaat terug naar 0', async ()=>{
       const app = el('app'); document.body.scrollTop = 40; app.scrollTop = 30;
