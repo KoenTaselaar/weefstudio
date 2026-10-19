@@ -82,6 +82,10 @@ body.zijRechts #schuifLabel{ left:auto; right:62px; }
 .staal.doek.donker::after{ color:#fffa; }
 .staal small.nr{ position:absolute; right:3px; bottom:1px; font-size:9px; font-weight:700; color:#000b; line-height:1; }
 .staal.donker small.nr{ color:#fffc; }
+.staal.tweede{ outline:2px dashed #fff9; outline-offset:1px; }
+.vkStaal.auto{ background:#3a3a40; color:#eee; font-size:11px; }
+.vkStaal small.nr{ position:absolute; right:2px; bottom:1px; font-size:9px; font-weight:700; color:#000b; }
+.vkStaal.donker small.nr{ color:#fffc; }
 .kpStaal small.nr{ position:absolute; right:3px; bottom:2px; font-size:10px; font-weight:700; color:#000b; }
 .kpStaal.donker small.nr{ color:#fffc; }
 .staalknop{ width:42px; height:42px; border-radius:10px; border:2px dashed #666; background:transparent; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
@@ -391,6 +395,7 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
     <div class="paneelkop">Stiften</div>
     <div class="paneelinhoud">
       <div id="stiftLijst"></div>
+      <div id="tweedeKleurStift"></div>
       <div id="verloopKeuzeStift"></div>
       <div class="sectie">
         <div class="sectiekop">Kwast</div>
@@ -424,7 +429,8 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
       <div class="sectiekop">Bereik</div>
       <div class="seg" id="vulAaneenKeuze"><button data-v="1">aaneengesloten vlak</button><button data-v="0">overal deze kleur</button></div>
       <div class="uitleg" id="vulRefNoot"></div>
-      <div class="uitleg">De dikte-schuif is bij vullen de korrel: de blokgrootte van glitter- en verloopvul. De dekking-schuif werkt ook bij vullen: 50% = om-en-om kleurmix in blokken van die korrel. Een glitter- of verloopvlak wordt onthouden: tik er later opnieuw in en het hele vlak wordt opnieuw gevuld, ook met de gewone emmer.</div>
+      <div class="uitleg">Houd de emmer even vast: het vlak dat gevuld wordt licht op; wegschuiven = niet vullen. Dikte = korrel van glitter en verloop; de dekking-schuif mengt met de kleur eronder.</div>
+      <div id="tweedeKleurVul"></div>
       <div id="verloopKeuzeVul"></div>
     </div>
   </div>
@@ -580,7 +586,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '1.3';
+const APP_VERSIE = '1.4';
 const APP_NAAM = 'PAINT 3K';
 
 const BAYER = (()=>{
@@ -618,7 +624,8 @@ function nieuwDoc(w, h, pxcm, palet, naam){
     palet: palet.slice(),
     lagen: [ nieuweLaag('achtergrond', w, h), nieuweLaag('laag 1', w, h) ],
     actief: 1,
-    kleur: 1,                      // actief garen (paletindex)
+    kleur: 1,                      // actieve kleur (paletindex)
+    kleur2: null,                  // tweede kleur voor bindingen, koord en glitter; null = de volgende in het palet
     patronen: [ new Uint8Array(64).fill(LEEG), new Uint8Array(64).fill(LEEG), new Uint8Array(64).fill(LEEG) ],
     ref: null,                     // referentieafbeelding {blob, dek, zicht}
     verlopen: [{kleuren:[]}],      // verlopen: elk zijn eigen garens (leeg = door het palet)
@@ -791,6 +798,7 @@ let hover = null;                         // {x,y} rasterpositie van muis/Pencil
 let zwevend = null;                       // transform in uitvoering (zie selectie-module)
 let selMask = null;                       // selectiemasker (Uint8Array), null = geen selectie
 let selVoorvertoning = null;              // lopende rechthoek/ellips/lasso-selectie (schermruimte)
+let vulVoorbeeld = null;                  // {m, bb, canvas, tot} het vlak dat de emmer gaat vullen (licht op)
 
 function initSamen(){
   samen.width = doc.w; samen.height = doc.h;
@@ -975,6 +983,7 @@ function teken(){
   wctx.strokeStyle = 'rgba(0,0,0,.6)'; wctx.lineWidth = 1;
   wctx.strokeRect(zicht.offx-.5, zicht.offy-.5, doc.w*s+1, doc.h*s+1);
   if(selVoorvertoning) tekenSelVoorvertoning(s);
+  if(vulVoorbeeld) tekenVulVoorbeeld(z, s);
   if(haal && haal.soort==='verloopvul') tekenVerloopPijl(haal);
   if(zwevend) tekenTransformKader();
   tekenCursor(s);
@@ -1069,6 +1078,29 @@ function tekenSelectieLaag(z, s){
   const zw = z.x1-z.x0+1, zh = z.y1-z.y0+1;
   wctx.imageSmoothingEnabled = false;
   wctx.drawImage(selCanvas, z.x0, z.y0, zw, zh, zicht.offx+z.x0*s, zicht.offy+z.y0*s, zw*s, zh*s);
+}
+
+function vulVoorbeeldZet(regio){
+  if(!regio){ vulVoorbeeld = null; return; }
+  const bb = regio.bb, bw = bb.x1-bb.x0+1, bh = bb.y1-bb.y0+1, w = doc.w;
+  const c = document.createElement('canvas'); c.width = bw; c.height = bh;
+  const g = c.getContext('2d'), img = g.createImageData(bw, bh), D = img.data, m = regio.m;
+  for(let y=0;y<bh;y++){ const rij = (bb.y0+y)*w + bb.x0; for(let x=0;x<bw;x++){ if(m[rij+x]){ const j = (y*bw+x)*4; D[j]=255; D[j+1]=255; D[j+2]=255; D[j+3]=120; } } }
+  g.putImageData(img, 0, 0);
+  vulVoorbeeld = {bb, canvas:c, tot:0};
+}
+function vulVoorbeeldWeg(na){
+  if(!vulVoorbeeld) return;
+  if(na){ const v = vulVoorbeeld; v.tot = performance.now()+na; setTimeout(()=>{ if(vulVoorbeeld===v){ vulVoorbeeld = null; vraagTeken(); } }, na); }
+  else vulVoorbeeld = null;
+  vraagTeken();
+}
+function tekenVulVoorbeeld(z, s){
+  const v = vulVoorbeeld, bb = v.bb;
+  const x0 = Math.max(z.x0, bb.x0), y0 = Math.max(z.y0, bb.y0), x1 = Math.min(z.x1, bb.x1), y1 = Math.min(z.y1, bb.y1);
+  if(x1 < x0 || y1 < y0) return;
+  wctx.imageSmoothingEnabled = false;
+  wctx.drawImage(v.canvas, x0-bb.x0, y0-bb.y0, x1-x0+1, y1-y0+1, zicht.offx+x0*s, zicht.offy+y0*s, (x1-x0+1)*s, (y1-y0+1)*s);
 }
 function tekenSelVoorvertoning(s){
   const v = selVoorvertoning;
@@ -1378,6 +1410,11 @@ function volgendePaletKleur(k){
   let n = (k|0) + 1;
   if(n >= doc.palet.length || n < 1) n = 1;
   return n;
+}
+function partnerKleur(k){
+  const p = doc.kleur2;
+  if(p!==null && p!==undefined && p < doc.palet.length && p !== k) return p;
+  return volgendePaletKleur(k);
 }
 
 const STIFTEN = [
@@ -1805,7 +1842,7 @@ function emmerVul(x, y, kleur, o){
 function glitterVul(x, y, kleur, o){
   const regio = vulRegio(x, y, o);
   if(!regio) return false;
-  const k2 = volgendePaletKleur(kleur), k3 = volgendePaletKleur(k2);
+  const k2 = partnerKleur(kleur), k3 = volgendePaletKleur(k2);
   const trio = [...new Set([kleur, k2, k3])];
   const K = regels.korrel, zout = (Math.random()*0x7fffffff)|0;
   regels.patroon = (px,py)=>{
@@ -2073,6 +2110,7 @@ function paletActie(nieuwPalet){
 function paletOpgeruimd(){
   const n = doc.palet.length;
   if(doc.kleur >= n) doc.kleur = n-1;
+  if(doc.kleur2!==null && doc.kleur2!==undefined && doc.kleur2 >= n) doc.kleur2 = null;
   doc.patronen.forEach(p=>{ for(let i=0;i<64;i++) if(p[i]!==LEEG && p[i]>=n) p[i]=LEEG; });
 }
 function herindexeer(map, nieuwPalet){
@@ -2084,6 +2122,7 @@ function herindexeer(map, nieuwPalet){
   (doc.verlopen||[]).forEach(v=>{ v.kleuren = v.kleuren.map(k=>map[k]); });
   (doc.vullingen||[]).forEach(v=>{ v.kleuren = v.kleuren.map(k=>map[k]); });
   doc.kleur = map[doc.kleur];
+  if(doc.kleur2!==null && doc.kleur2!==undefined) doc.kleur2 = map[doc.kleur2];
   doc.palet = nieuwPalet.slice();
   paletPlatCache = null;
   maakVuilAlles(); bouwStalen(); bouwLagen(); vraagTeken();
@@ -2665,7 +2704,7 @@ function startHaal(e, px, py){
   const [x,y] = rasterVan(px, py);
   const maat = maatMetDruk(e, inst.maat);
   let patroon = null;
-  if(!gum && isBinding(stift)) patroon = patroonFunctie(stift, doc.kleur, volgendePaletKleur(doc.kleur), Math.max(1, inst.maat));
+  if(!gum && isBinding(stift)) patroon = patroonFunctie(stift, doc.kleur, partnerKleur(doc.kleur), Math.max(1, inst.maat));
   beginHandeling(L, {dek:inst.dek, spiegelX:inst.spiegelX, spiegelY:inst.spiegelY, negeerSlot:gum, patroon});
   const nu = performance.now();
   haal = {soort:'haal', stift, type:e.pointerType, id:e.pointerId, laag:L,
@@ -2683,7 +2722,7 @@ function startHaal(e, px, py){
     haal.kleur = haal.kleuren[0];
   }
   if(stift==='stippel') haal.stap = 0;
-  if(stift==='koord'){ haal.hoek = 0; haal.kleurA = doc.kleur; haal.kleurB = volgendePaletKleur(doc.kleur); }
+  if(stift==='koord'){ haal.hoek = 0; haal.kleurA = doc.kleur; haal.kleurB = partnerKleur(doc.kleur); }
   haal.pixelPerfect = (stift==='potlood' || gum) && maat===1 && inst.dek===64 && inst.pixelPerfect && !inst.drukDikte && haal.kwast==='blok';
 
   if(haal.soort==='vorm'){
@@ -2759,6 +2798,13 @@ function startVul(e, px, py){
     vraagTeken();
     return;
   }
+  const regio = vulRegio(x, y, o);
+  if(regio) vulVoorbeeldZet(regio); else vulVoorbeeldWeg();
+  haal = {soort:'vulwacht', type:e.pointerType, id:e.pointerId, laag:L, x, y, o, vulSoort:soort, startPX:px, startPY:py};
+  vraagTeken();
+}
+function vulUitvoeren(h){
+  const L = h.laag, o = h.o, soort = h.vulSoort, x = h.x, y = h.y;
   let gelukt = false;
   const vulVoor = (doc.vullingen||[]).slice();
   for(const [qx,qy] of spiegelPunten(x, y)){
@@ -2769,9 +2815,12 @@ function startVul(e, px, py){
     const stap = diffUitBbox(L, strokeKopie, strokeBbox);
     if(stap){ stap.vullingenVoor = vulVoor; stap.vullingenNa = (doc.vullingen||[]).slice(); }
     undoPush(stap); maakVuilRect(strokeBbox); vraagTeken(); bouwLagenThumbStraks();
+    vulVoorbeeldWeg(220);                           // nog even laten nagloeien: dít is gevuld
+  }else{
+    vulVoorbeeldWeg();
+    if(regels.masker && !selMask[y*doc.w+x]) toast('Dit punt ligt buiten de selectie — tik Opheffen om de selectie los te laten');
+    else if(regels.slot) toast('Alpha-slot staat aan: deze laag vult alleen waar al iets staat');
   }
-  else if(regels.masker && !selMask[y*doc.w+x]) toast('Dit punt ligt buiten de selectie — tik Opheffen om de selectie los te laten');
-  else if(regels.slot) toast('Alpha-slot staat aan: deze laag vult alleen waar al iets staat');
 }
 
 function pipetKies(x, y){
@@ -2859,6 +2908,10 @@ weergave.addEventListener('pointermove', e=>{
   const h = haal;
   if(drukTimer && h.startPX !== undefined && Math.hypot(px-h.startPX, py-h.startPY) > 9){ clearTimeout(drukTimer); drukTimer = null; }
 
+  if(h.soort==='vulwacht'){
+    if(Math.hypot(px-h.startPX, py-h.startPY) > 14) haalAfbreken();     // weggeschoven: toch niet vullen
+    return;
+  }
   if(h.soort==='pan'){
     zicht.offx += px - h.x; zicht.offy += py - h.y;
     h.x = px; h.y = py;
@@ -2967,6 +3020,7 @@ function haalAfbreken(){
   clearInterval(spuitTimer); clearInterval(snapTimer);
   const h = haal; haal = null;
   if(!h) return;
+  if(h.soort==='vulwacht'){ vulVoorbeeldWeg(); return; }
   if(h.soort==='haal' || h.soort==='vorm' || h.soort==='verloopvul'){
     if(strokeBbox.actief) herstelRect(h.laag, strokeKopie, strokeBbox);
     if(h.prevBbox) herstelRect(h.laag, strokeKopie, h.prevBbox);
@@ -2992,6 +3046,7 @@ function haalCommit(){
   if(!h) return;
   if(h.soort==='transform'){ transformVuilAf(); }
   else if(h.soort==='sel'){ selVoltooi(h); }
+  else if(h.soort==='vulwacht'){ vulUitvoeren(h); }
   else if(h.soort==='verloopvul'){
     verloopVulTeken(h, h.vx, h.vy, true);
     const stap = diffUitBbox(h.laag, strokeKopie, strokeBbox);
@@ -3179,6 +3234,18 @@ function maatStap(m, richting){
 }
 function zetMaat(m){ inst.maat = klem(m|0, 1, MAAT_MAX); bewaarInst(); schuifBij(); vraagTeken(); }
 function zetDek(d){ inst.dek = klem(Math.round(d/4)*4, 4, 64); bewaarInst(); schuifBij(); }
+const rasterPlaatjes = new Map();
+function rasterDataURL(dek, hexA, hexB){
+  const sleutel = dek+hexA+hexB;
+  if(rasterPlaatjes.has(sleutel)) return rasterPlaatjes.get(sleutel);
+  const c = document.createElement('canvas'); c.width = 8; c.height = 8;
+  const g = c.getContext('2d');
+  for(let y=0;y<8;y++) for(let x=0;x<8;x++){ g.fillStyle = dektHier(dek, y<<3, x) ? hexA : hexB; g.fillRect(x, y, 1, 1); }
+  const url = c.toDataURL();
+  if(rasterPlaatjes.size > 64) rasterPlaatjes.clear();
+  rasterPlaatjes.set(sleutel, url);
+  return url;
+}
 function schuifBij(){
   const zetS = (id, t)=>{
     const s = el(id);
@@ -3191,6 +3258,12 @@ function schuifBij(){
   const dw = el('dekWaarde');
   dw.textContent = Math.round(inst.dek/64*100)+'%';
   dw.classList.toggle('let', inst.dek<64);     // opvallend als de dekking per ongeluk omlaag staat
+  if(doc){
+    const knop = el('schuifDek').querySelector('.knop');
+    knop.style.backgroundImage = 'url('+rasterDataURL(inst.dek, doc.palet[doc.kleur] || '#000', doc.palet[0] || '#fff')+')';
+    knop.style.backgroundSize = '24px 24px';
+    knop.style.imageRendering = 'pixelated';
+  }
 }
 function maatTekst(m){ return m+' px · '+nlGetal(m/doc.pxcm, m/doc.pxcm<1 ? 2 : 1)+' cm'; }
 function schuifKoppel(id, vanT, label){
@@ -3226,6 +3299,7 @@ function bouwStalen(){
     b.style.background = hex;
     b.title = i===0 ? 'doek (achtergrondkleur)' : 'kleur '+i;
     if(i>0) b.appendChild(maak('small', 'nr', String(i)));      // het kleurnummer is het belangrijkste gegeven: altijd zichtbaar
+    if(i===doc.kleur2 && i!==doc.kleur) b.classList.add('tweede');  // de vaste tweede kleur
     b.addEventListener('click', ()=>{
       if(doc.kleur===i){ paneelToggle('kleur'); return; }
       if(paneelActief && paneelActief!=='kleur') paneelSluit();
@@ -3672,12 +3746,12 @@ dekSchuif.addEventListener('change', ()=>{
 
 function stiftVoorbeeld(cv, id){
   const w = cv.width, h = cv.height, g = cv.getContext('2d');
-  const P = doc.palet, A = P[doc.kleur] || '#000', B = P[volgendePaletKleur(doc.kleur)] || '#888';
+  const P = doc.palet, A = P[doc.kleur] || '#000', B = P[partnerKleur(doc.kleur)] || '#888';
   g.fillStyle = isLicht(P[0]) ? P[0] : '#eee'; g.fillRect(0,0,w,h);
   const S = klem(inst.maat, 1, 6);
   const f = BINDINGEN[id];
   if(f || id.startsWith('eigen')){
-    const pat = patroonFunctie(id, doc.kleur, volgendePaletKleur(doc.kleur), S);
+    const pat = patroonFunctie(id, doc.kleur, partnerKleur(doc.kleur), S);
     for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const k = pat(x,y); if(k===SKIP) continue; g.fillStyle = P[k]; g.fillRect(x,y,1,1); }
     return;
   }
@@ -3694,7 +3768,32 @@ function stiftVoorbeeld(cv, id){
   else if(id==='wiebel'){ g.fillStyle = A; for(let x=4;x<w-4;x++) g.fillRect(x, golf(x)+Math.round((Math.random()-0.5)*4), 1, 2); }
   else if(id==='koord'){ for(let x=4;x<w-4;x++){ const a=x/2; g.fillStyle = A; g.fillRect(x, Math.round(h/2+Math.sin(a)*4), 2, 2); g.fillStyle = B; g.fillRect(x, Math.round(h/2-Math.sin(a)*4), 2, 2); } }
 }
-const GROEPEN = [['tekenen','Tekenen'],['vormen','Vormen'],['effect','Effectstiften'],['binding','Bindingen — kleur + volgende kleur · dikte = patroonmaat']];
+const GROEPEN = [['tekenen','Tekenen'],['vormen','Vormen'],['effect','Effectstiften'],['binding','Bindingen — kleur + tweede kleur · dikte = patroonmaat']];
+
+function bouwTweedeKleur(vak){
+  if(!vak || !doc) return;
+  vak.innerHTML = '';
+  vak.appendChild(maak('div', 'sectiekop', 'Tweede kleur — bindingen, koord en glitter'));
+  const rij = maak('div', 'vkPalet');
+  const auto = maak('button', 'vkStaal auto'+(doc.kleur2===null || doc.kleur2===undefined ? ' actief' : ''), 'auto');
+  auto.title = 'automatisch: de volgende kleur in het palet';
+  auto.addEventListener('click', ()=>{ doc.kleur2 = null; markeerGewijzigd(); tweedeKleurBij(); });
+  rij.appendChild(auto);
+  doc.palet.forEach((hex, k)=>{
+    const b = maak('button', 'vkStaal'+(k===doc.kleur2 ? ' actief' : '')+(isLicht(hex) ? '' : ' donker'));
+    b.style.background = hex; b.title = k===0 ? 'doek' : 'kleur '+k;
+    b.appendChild(maak('small', 'nr', k===0 ? 'doek' : String(k)));
+    b.addEventListener('click', ()=>{ doc.kleur2 = k; markeerGewijzigd(); tweedeKleurBij(); });
+    rij.appendChild(b);
+  });
+  vak.appendChild(rij);
+  const nu = partnerKleur(doc.kleur);
+  vak.appendChild(maak('div', 'uitleg', (doc.kleur2===null || doc.kleur2===undefined ? 'Automatisch: nu kleur '+nu+'.' : 'Vast: kleur '+doc.kleur2+(doc.kleur2===doc.kleur ? ' (gelijk aan de actieve kleur, dus tijdelijk kleur '+nu+')' : '')+'.')+' Glitter gebruikt daarnaast de kleur die erop volgt.'));
+}
+function tweedeKleurBij(){
+  bouwTweedeKleur(el('tweedeKleurStift')); bouwTweedeKleur(el('tweedeKleurVul'));
+  stiftenVoorbeelden(); bouwStalen();
+}
 function bouwStiften(){
   const vak = el('stiftLijst');
   vak.innerHTML = '';
@@ -3722,6 +3821,7 @@ function bouwStiften(){
   stiftenVoorbeelden();
   stiftenBij();
   bouwVerloopKeuze(el('verloopKeuzeStift'));
+  bouwTweedeKleur(el('tweedeKleurStift'));
 }
 function stiftenVoorbeelden(){
   el('stiftLijst').querySelectorAll('.stift').forEach(b=>stiftVoorbeeld(b.querySelector('canvas'), b.dataset.stift));
@@ -3746,6 +3846,7 @@ function vulPaneelBij(){
   el('vulZichtKeuze').querySelectorAll('button').forEach(b=>b.classList.toggle('actief', (b.dataset.v==='1')===inst.vulZicht));
   el('vulAaneenKeuze').querySelectorAll('button').forEach(b=>b.classList.toggle('actief', (b.dataset.v==='1')===inst.vulAaneen));
   bouwVerloopKeuze(el('verloopKeuzeVul'));
+  bouwTweedeKleur(el('tweedeKleurVul'));
   const R = doc.refLaag ? doc.lagen.find(l=>l.id===doc.refLaag) : null;
   el('vulRefNoot').textContent = R ? 'Begrenzing komt van de referentielaag "'+R.naam+'" (uitzetten via het laagmenu).'
                                     : 'Tip: zet je lijnlaag als referentie via het laagmenu; dan begrenzen alleen die lijnen het vullen, op elke laag.';
@@ -4377,7 +4478,7 @@ function laagRle(L){
 function laagRecord(l){ return {id:l.id, naam:l.naam, zicht:l.zicht, dek:l.dek, slot:!!l.slot, rle:laagRle(l)}; }
 function docNaarRecord(d, lagen){
   return {
-    id:d.id, naam:d.naam, w:d.w, h:d.h, pxcm:d.pxcm, palet:d.palet.slice(), actief:d.actief, kleur:d.kleur,
+    id:d.id, naam:d.naam, w:d.w, h:d.h, pxcm:d.pxcm, palet:d.palet.slice(), actief:d.actief, kleur:d.kleur, kleur2:(d.kleur2===undefined ? null : d.kleur2),
     lagen: lagen || d.lagen.map(laagRecord),
     patronen: d.patronen.map(p=>Array.from(p)),
     verlopen: (d.verlopen||[]).map(v=>({kleuren:(v.kleuren||[]).slice()})), verloopActief: d.verloopActief||0, refLaag: d.refLaag||null,
@@ -4401,6 +4502,7 @@ function recordNaarDoc(r){
   if(!d.lagen.length) d.lagen = [nieuweLaag('achtergrond', r.w, r.h)];
   d.actief = klem(r.actief===undefined ? d.lagen.length-1 : r.actief, 0, d.lagen.length-1);
   d.kleur = klem(r.kleur===undefined ? 1 : r.kleur, 0, d.palet.length-1);
+  d.kleur2 = (r.kleur2===undefined || r.kleur2===null || r.kleur2 >= d.palet.length) ? null : r.kleur2;
   d.patronen = (r.patronen||[]).map(p=>Uint8Array.from(p));
   while(d.patronen.length<3) d.patronen.push(new Uint8Array(64).fill(LEEG));
   d.verlopen = (r.verlopen && r.verlopen.length) ? r.verlopen.map(v=>({kleuren:(v.kleuren||[]).filter(k=>k<d.palet.length)})) : [{kleuren:(r.verloop||[]).filter(k=>k<d.palet.length)}];
@@ -4619,6 +4721,7 @@ async function migreerOud(){
         });
         d.actief = klem(o.actief===undefined ? d.lagen.length-1 : o.actief, 0, d.lagen.length-1);
         d.kleur = klem(o.kleur||1, 0, d.palet.length-1);
+        d.kleur2 = (o.kleur2===undefined || o.kleur2===null || o.kleur2 >= d.palet.length) ? null : o.kleur2;
         if(o.patronen && o.patronen.length===3) d.patronen = o.patronen.map(p=>Uint8Array.from(p));
         d.gemaakt = it.tijd; d.gewijzigd = it.tijd;
         await bewaarDocRecord(d);
@@ -4671,7 +4774,7 @@ function projectJson(d){
     w:d.w, h:d.h, pxcm:d.pxcm, naam:d.naam, palet:d.palet,
     lagen: d.lagen.map(l=>({naam:l.naam, zicht:l.zicht, dek:l.dek, slot:!!l.slot, rle:b64(rleCodeer(l.data))})),
     patronen: d.patronen.map(p=>b64(p)),
-    verlopen: (d.verlopen||[]).map(v=>({kleuren:v.kleuren})), verloopActief: d.verloopActief||0,
+    verlopen: (d.verlopen||[]).map(v=>({kleuren:v.kleuren})), verloopActief: d.verloopActief||0, kleur2:(d.kleur2===undefined ? null : d.kleur2),
     refLaagIndex: d.lagen.findIndex(l=>l.id===d.refLaag),
     vullingen: (d.vullingen||[]).map(v=>({laagIndex:d.lagen.findIndex(l=>l.id===v.laag), kleuren:v.kleuren, x0:v.x0, y0:v.y0, x1:v.x1, y1:v.y1, rle:b64(v.rle)})).filter(v=>v.laagIndex>=0),
   });
@@ -4925,6 +5028,7 @@ function projectNaarDoc(o, naam){
     while(d.patronen.length<3) d.patronen.push(new Uint8Array(64).fill(LEEG));
     d.verlopen = (o.verlopen && o.verlopen.length) ? o.verlopen.map(v=>({kleuren:(v.kleuren||[]).filter(k=>k<d.palet.length)})) : [{kleuren:(o.verloop||[]).filter(k=>k<d.palet.length)}];
     d.verloopActief = o.verloopActief||0;
+    d.kleur2 = (o.kleur2===undefined || o.kleur2===null || o.kleur2 >= d.palet.length) ? null : o.kleur2;
     d.refLaag = (o.refLaagIndex>=0 && d.lagen[o.refLaagIndex]) ? d.lagen[o.refLaagIndex].id : null;
     d.vullingen = (o.vullingen||[]).filter(v=>d.lagen[v.laagIndex]).map(v=>({laag:d.lagen[v.laagIndex].id, kleuren:v.kleuren||[], x0:v.x0, y0:v.y0, x1:v.x1, y1:v.y1, rle:unb64(v.rle)}));
     return d;
@@ -4934,7 +5038,7 @@ async function importProjectBestand(f){
     const o = JSON.parse(await f.text());
     if(o.app==='weefstudio-reservekopie'){ await importAlles(o); return; }
     if(o.app!=='weefstudio') throw new Error('geen weefstudio-bestand');
-    const d = projectNaarDoc(o, f.name.replace(/\.weefstudio\.json$|\.json$/i, ''));
+    const d = projectNaarDoc(o, f.name.replace(/\.(weefstudio|paint3k)\.json$|\.json$/i, ''));
     if(doc) await bewaarNu(true);
     zetDoc(d);
     bewaarNu();
@@ -6363,6 +6467,41 @@ async function zelftest(){
       s.checked = gb; s.dispatchEvent(new Event('change'));
       return (linksOk && rechtsOk && schakelt) || 'links '+linksOk+' rechts '+rechtsOk+' schakelaar '+schakelt;
     });
+    await test('Tweede kleur: koord, binding en glitter gebruiken de gekozen kleur; hernummeren en opslaan nemen hem mee', async ()=>{
+      const k2 = doc.kleur2; doc.kleur = 1; doc.kleur2 = 4;
+      if(partnerKleur(1)!==4 || partnerKleur(4)!==volgendePaletKleur(4)) return 'partnerKleur';
+      const bid = Object.keys(BINDINGEN)[0], pat = patroonFunctie(bid, 1, partnerKleur(1), 2);
+      let met4 = false; for(let y=0;y<16 && !met4;y++) for(let x=0;x<16;x++){ const v = pat(x,y); if(v===4) met4 = true; }
+      if(!met4) return 'binding '+bid+' gebruikt kleur 4 niet';
+      const j = JSON.parse(projectJson(doc)); if(j.kleur2!==4) return 'projectbestand mist kleur2';
+      const d2 = projectNaarDoc(j, 'x'); if(d2.kleur2!==4) return 'terugladen mist kleur2';
+      const map = [0,2,1,3,4]; const paletVoor = doc.palet.slice();            // kleur 1 en 2 wisselen van plek
+      herindexeer(map, [paletVoor[0], paletVoor[2], paletVoor[1], paletVoor[3], paletVoor[4]]);
+      const naWissel = doc.kleur===2 && doc.kleur2===4;
+      herindexeer(map, paletVoor);                                               // en terug
+      doc.kleur2 = k2; doc.kleur = 1;
+      return naWissel || 'hernummeren';
+    });
+    await test('Dekking-schuif toont het raster; emmer licht eerst op en vult bij loslaten, wegschuiven vult niet', async ()=>{
+      const u50 = rasterDataURL(32, '#1a1a1a', '#f2ead8'), u100 = rasterDataURL(64, '#1a1a1a', '#f2ead8');
+      if(!u50.startsWith('data:image/png') || u50===u100) return 'rasterplaatje';
+      const L = doc.lagen[2], kopie = L.data.slice(), dekVoor = L.dek, vulVoor = doc.vullingen; L.dek = 64; doc.vullingen = []; doc.actief = 2;
+      L.data.fill(LEEG); for(let y=5;y<40;y++) for(let x=40;x<60;x++) L.data[y*64+x] = 3;
+      maakVuilAlles(); verzekerComposiet();
+      zicht.schaal = 10; zicht.offx = 50; zicht.offy = 50;
+      inst.tool = 'vul'; inst.vulSoort = 'emmer'; inst.vulZicht = true; inst.vulAaneen = true; inst.dek = 64; inst.maat = 1; doc.kleur = 4;
+      wijzer('pointerdown', 50, 20);
+      const tijdens = {voorbeeld: !!vulVoorbeeld, haal: haal && haal.soort, gevuld: L.data[20*64+50]};
+      wijzer('pointerup', 50, 20);
+      let n1 = 0; for(let y=5;y<40;y++) for(let x=40;x<60;x++) if(L.data[y*64+x]===4) n1++;
+      ongedaan();
+      wijzer('pointerdown', 50, 20); wijzer('pointermove', 56, 24); wijzer('pointerup', 56, 24);   // 60 schermpunten weg
+      let n2 = 0; for(let y=5;y<40;y++) for(let x=40;x<60;x++) if(L.data[y*64+x]===4) n2++;
+      const na = {haal: !!haal, voorbeeld: !!vulVoorbeeld};
+      L.data.set(kopie); L.dek = dekVoor; doc.vullingen = vulVoor; vulVoorbeeld = null; maakVuilAlles(); verzekerComposiet();
+      return (tijdens.voorbeeld && tijdens.haal==='vulwacht' && tijdens.gevuld===3 && n1===700 && n2===0 && !na.haal) || JSON.stringify({tijdens, n1, n2, na});
+    });
+    Object.assign(inst, JSON.parse(instVoor)); Object.assign(zicht, zichtVoor);
     await test('Scrollwacht: een verschoven vaste lay-out gaat terug naar 0', async ()=>{
       const app = el('app'); document.body.scrollTop = 40; app.scrollTop = 30;
       const voor = document.body.scrollTop + app.scrollTop;          // niet elke browser laat zich hier verschuiven

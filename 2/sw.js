@@ -1,4 +1,4 @@
-const CACHE = 'paint3k-beta-v1.3';
+const CACHE = 'paint3k-beta-v1.4';
 const PREFIX = 'paint3k-beta-';
 const KERN = ['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png','./icon-maskable-512.png'];
 const NIETS = ()=>new Response('Geen verbinding en nog niets in de cache.', {status:503, headers:{'Content-Type':'text/plain;charset=utf-8'}});
