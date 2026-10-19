@@ -185,7 +185,10 @@ input[type=number]{ width:90px; }
 #galerijKop{ padding:calc(8px + env(safe-area-inset-top)) 16px 8px; display:flex; justify-content:space-between; align-items:center; background:var(--balk); border-bottom:1px solid #111; }
 #galerijKop .titel{ font-size:20px; font-weight:700; }
 #galerijKop .titel small{ font-weight:400; color:var(--tekst2); font-size:14px; margin-left:6px; }
-#galerijKop .kopknoppen{ display:flex; gap:8px; }
+#galerijKop .kopknoppen{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+#galNotitie{ padding:10px 16px; font-size:14px; color:var(--tekst2); border-bottom:1px solid #111; line-height:1.45; }
+#galNotitie.let{ color:#ffb14a; }
+#galNotitie b{ color:var(--tekst); }
 #galerijLijst{ flex:1; overflow-y:auto; padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:16px; align-content:start; touch-action:pan-y; }
 .kaart{ background:var(--paneel); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 2px 10px #0006; }
 .kaart .thumb{ aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:#35353a; padding:12px; }
@@ -236,7 +239,8 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<meta name="apple-mobile-web-app-title" content="PAINT 3K">
+<meta name="apple-mobile-web-app-title" content="PAINT 3K bèta">
+<meta name="description" content="PAINT 3K: pixeltekenprogramma op ware weefresolutie, voor iPad en Mac.">
 </head>
 <body>
 <svg id="iconen" xmlns="http://www.w3.org/2000/svg" style="display:none">
@@ -529,6 +533,11 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
           <p>Dekking van een laag is ook een weefraster. Alpha-slot: alleen tekenen waar de laag al iets heeft.</p>
           <p><b>Toetsenbord</b></p>
           <p>B stift · E gum · G vullen · S selectie · V transformeer · I pipet · L lagen · C kleuren · [ ] dikte · X spiegel · ⌘Z/⇧⌘Z · ⌘C/X/V · ⌘A/⌘D · ⌘0 passend · ⌘1 100%</p>
+          <p><b>Foutlog</b></p>
+          <p>Gaat er iets mis, dan komt het hier terecht: <span id="foutlogInfo">geen meldingen</span>.
+            <button class="knop" id="kFoutlogDelen">Foutlog delen</button> <button class="knop" id="kFoutlogWissen">Wissen</button></p>
+          <p><b>Over PAINT 3K</b></p>
+          <p>Pixeltekenprogramma voor de iPad en de Mac, gemaakt voor en met Koen Taselaar (Rotterdam, 2026). Elke tekening is een raster van kleurnummers op ware weefresolutie; alles wat je ziet is een harde pixel. Adres: koentaselaar.github.io/weefstudio — op de iPad via Delen › Zet op beginscherm, op de Mac via Safari › Archief › Voeg toe aan Dock.</p>
           <p class="versie">PAINT 3K <span id="versieTekst"></span></p>
         </div>
       </div>
@@ -539,11 +548,13 @@ body.uiWeg #bovenbalk, body.uiWeg #onderbalk, body.uiWeg #zijbalk, body.uiWeg #s
     <header id="galerijKop">
       <div class="titel">PAINT 3K <small>galerij · <span id="galVersie"></span></small></div>
       <div class="kopknoppen">
+        <button class="knop" id="kGalReserve" title="alle kleden in één bestand bewaren"><svg class="ic"><use href="#i-deel"/></svg> Reservekopie</button>
         <button class="knop" id="kGalImport"><svg class="ic"><use href="#i-import"/></svg> Importeer</button>
         <button class="knop primair" id="kGalNieuw"><svg class="ic"><use href="#i-plus"/></svg> Nieuw kleed</button>
         <button class="knop" id="kGalTerug" hidden><svg class="ic"><use href="#i-kruis"/></svg></button>
       </div>
     </header>
+    <div id="galNotitie" hidden></div>
     <div id="galerijLijst"></div>
   </div>
 
@@ -563,7 +574,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '2.13';
+const APP_VERSIE = '1.0';
 const APP_NAAM = 'PAINT 3K';
 
 const BAYER = (()=>{
@@ -4450,7 +4461,22 @@ async function galerijToon(){
   el('kGalTerug').hidden = !doc;
   el('galVersie').textContent = 'v'+APP_VERSIE;
   el('galerijScherm').hidden = false;
+  galNotitieBij(lijst.length);
 }
+
+async function galNotitieBij(aantal){
+  const vak = el('galNotitie');
+  let t = null; try{ t = await dbDoe('meta', 'readonly', s=>s.get('reservekopie')); }catch(e){}
+  const dagen = t ? Math.floor((Date.now()-t)/864e5) : null;
+  const laat = aantal > 0 && (dagen===null || dagen > 14);
+  const delen = [];
+  if(aantal > 0) delen.push('Laatste reservekopie: '+(dagen===null ? 'nog nooit' : dagen===0 ? 'vandaag' : dagen===1 ? 'gisteren' : dagen+' dagen geleden')+(laat ? ' — tik op Reservekopie en bewaar het bestand in Bestanden of iCloud.' : '.'));
+  if(/\/2\/?(index\.html)?$/.test(location.pathname)) delen.push('<b>Dit is het oude bèta-adres.</b> PAINT 3K staat nu op het hoofdadres koentaselaar.github.io/weefstudio. Maak hier een reservekopie, zet de app vanaf het hoofdadres op je beginscherm en importeer daar het bestand; deze bèta kun je daarna van het beginscherm halen.');
+  vak.innerHTML = delen.join('<br>');
+  vak.classList.toggle('let', laat);
+  vak.hidden = !delen.length;
+}
+function reservekopieGemarkeerd(){ dbDoe('meta', 'readwrite', s=>s.put(Date.now(), 'reservekopie')).catch(()=>{}); }
 function galerijVerberg(){ el('galerijScherm').hidden = true; }
 function kaartMenu(it){
   const vak = maak('div', 'menu');
@@ -5681,7 +5707,7 @@ function exportDialoog(){
       const s = maak('button', 'knop', 'Sluiten'); s.addEventListener('click', dialoogSluit);
       const d = maak('button', 'knop primair', 'Delen');
       d.appendChild(icoon('deel'));
-      d.addEventListener('click', ()=>{ const t = exportTaak; if(t && t.blob) deelOfDownload(new File([t.blob], t.naam, {type:mimeVoor(t.naam)})); });
+      d.addEventListener('click', ()=>{ const t = exportTaak; if(t && t.blob){ deelOfDownload(new File([t.blob], t.naam, {type:mimeVoor(t.naam)})); if(/reservekopie/.test(t.naam)) reservekopieGemarkeerd(); } });
       knoppen.append(s, d);
     }
   };
@@ -5720,7 +5746,7 @@ function exportKlaarDialoog(blob, naam, uitleg){
   vak.appendChild(st);
   dialoogOpen('Exporteren', vak, [
     {tekst:'Sluiten'},
-    {tekst:'Delen', primair:true, actie:()=>{ const t = exportTaak; if(t && t.blob) deelOfDownload(new File([t.blob], t.naam, {type:mimeVoor(t.naam)})); return false; }},
+    {tekst:'Delen', primair:true, actie:()=>{ const t = exportTaak; if(t && t.blob){ deelOfDownload(new File([t.blob], t.naam, {type:mimeVoor(t.naam)})); if(/reservekopie/.test(t.naam)){ reservekopieGemarkeerd(); if(!el('galerijScherm').hidden) galNotitieBij(1); } } return false; }},
   ], ()=>{ exportTaak = null; });
 }
 
@@ -5756,6 +5782,12 @@ async function start(){
   el('kGalerij').addEventListener('click', galerijToon);
   el('kGalNieuw').addEventListener('click', nieuwDoekDialoog);
   el('kGalImport').addEventListener('click', ()=>bestandKies('nieuw'));   // in de galerij: altijd als nieuw kleed
+  el('kGalReserve').addEventListener('click', async ()=>{
+    try{
+      const r = await maakReservekopie(null, null);
+      exportKlaarDialoog(r.blob, r.naam, r.aantal+' kleden in één bestand. Tik op Delen en kies "Bewaar in Bestanden" (of iCloud Drive). Terugzetten: Galerij › Importeer met dit bestand.');
+    }catch(e){ toast(e && e.message ? e.message : 'Reservekopie mislukt'); }
+  });
   el('kGalTerug').addEventListener('click', ()=>{ if(doc) galerijVerberg(); });
   schuifBij();
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
@@ -6141,6 +6173,13 @@ async function zelftest(){
       B.set(Bkopie); doc.vullingen = []; doc.actief = 1; maakVuilAlles(); verzekerComposiet();
       return r2 && r2.geheugen && n2===40*30 && terug;
     });
+    await test('Foutlog: meldingen komen in het logboek, tekst is deelbaar, wissen leegt het', async ()=>{
+      const bewaar = localStorage.getItem(FOUTLOG_SLEUTEL); foutlogSchrijf([]); const gemeld = foutlogGemeld; foutlogGemeld = true;
+      foutLog('proeffout', 'regel 1'); foutLog('tweede', '');
+      const l = foutlogLees(), tekst = foutlogTekst();
+      foutlogSchrijf([]); foutlogBij(); if(bewaar) localStorage.setItem(FOUTLOG_SLEUTEL, bewaar); foutlogGemeld = gemeld;
+      return l.length===2 && l[0].m==='proeffout' && l[0].v===APP_VERSIE && /proeffout/.test(tekst) && tekst.startsWith(APP_NAAM+' ');
+    });
     await test('Import geïndexeerde PNG als laag: kleuren op kleur, leeg blijft leeg', async ()=>{
       const r = await exportMaak({wat:'lagen', formaat:'pngidx', naam:'zt'}, niets, nooit);
       const items = await leesZip(await blobNaarBytes(r.blob));
@@ -6240,6 +6279,39 @@ async function zelftest(){
   return uit;
 }
 if(/[?&]zelftest/.test(location.search)) startKlaar.then(()=>zelftest()).catch(e=>console.error('zelftest', e));
+
+const FOUTLOG_SLEUTEL = 'p3k_foutlog', FOUTLOG_MAX = 30;
+let foutlogGemeld = false;
+function foutlogLees(){ try{ const l = JSON.parse(localStorage.getItem(FOUTLOG_SLEUTEL) || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+function foutlogSchrijf(l){ try{ localStorage.setItem(FOUTLOG_SLEUTEL, JSON.stringify(l.slice(-FOUTLOG_MAX))); }catch(e){} }
+function foutLog(melding, detail){
+  const l = foutlogLees();
+  l.push({t:new Date().toISOString(), v:APP_VERSIE, m:String(melding).slice(0, 300), d:String(detail || '').slice(0, 600),
+          k:(typeof doc!=='undefined' && doc) ? doc.w+'×'+doc.h+' · '+doc.lagen.length+' lagen · '+doc.palet.length+' kleuren' : '-'});
+  foutlogSchrijf(l); foutlogBij();
+  if(!foutlogGemeld){ foutlogGemeld = true; try{ toast('Er ging iets mis; de details staan in Acties › Help › Foutlog', true); }catch(e){} }
+}
+window.addEventListener('error', e=>{
+  const st = e.error && e.error.stack ? e.error.stack.split('\n').slice(0, 4).join(' | ') : '';
+  foutLog(e.message || 'fout', (e.filename || '').replace(/^.*\//, '')+':'+(e.lineno || 0)+' '+st);
+});
+window.addEventListener('unhandledrejection', e=>{
+  const r = e.reason;
+  foutLog('belofte: '+((r && r.message) || r), r && r.stack ? r.stack.split('\n').slice(0, 4).join(' | ') : '');
+});
+function foutlogTekst(){
+  const l = foutlogLees();
+  return APP_NAAM+' '+APP_VERSIE+' · '+navigator.userAgent+'\n\n'+l.map(f=>f.t+' · v'+f.v+' · '+f.k+'\n'+f.m+'\n'+f.d).join('\n\n')+'\n';
+}
+function foutlogBij(){
+  const n = foutlogLees().length, s = el('foutlogInfo');
+  if(s) s.textContent = n ? n+' melding'+(n===1 ? '' : 'en') : 'geen meldingen';
+  if(el('kFoutlogDelen')) el('kFoutlogDelen').disabled = !n;
+  if(el('kFoutlogWissen')) el('kFoutlogWissen').disabled = !n;
+}
+el('kFoutlogDelen').addEventListener('click', ()=>{ paneelSluit(); exportKlaarDialoog(new Blob([foutlogTekst()], {type:'text/plain'}), 'paint3k-foutlog.txt', 'Het foutlog staat klaar om te delen, bijvoorbeeld naar jezelf per mail of in het gesprek met Claude.'); });
+el('kFoutlogWissen').addEventListener('click', ()=>{ foutlogSchrijf([]); foutlogBij(); });
+foutlogBij();
 
 </script>
 <script>
