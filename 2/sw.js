@@ -1,4 +1,4 @@
-const CACHE = 'paint3k-beta-v1.0';
+const CACHE = 'paint3k-beta-v1.1';
 const PREFIX = 'paint3k-beta-';
 const KERN = ['./','./index.html','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png','./icon-maskable-512.png'];
 self.addEventListener('install', e=>{

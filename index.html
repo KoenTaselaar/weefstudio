@@ -574,7 +574,7 @@ const PXCM_STANDAARD = 14;        // Koens werkresolutie: ±14 rasterpunten per 
 const MAX_PX = 16e6;              // iPad Safari kan geen canvas boven ±16,7 miljoen px aan
 const MAX_ZIJDE = 9000;           // langste zijde in rasterpunten
 const UNDO_BUDGET = 200e6;        // geheugen voor ongedaan-stappen (bytes)
-const APP_VERSIE = '1.0';
+const APP_VERSIE = '1.1';
 const APP_NAAM = 'PAINT 3K';
 
 const BAYER = (()=>{
@@ -3194,7 +3194,11 @@ function bouwStalen(){
     vak.appendChild(b);
   });
   const act = vak.querySelector('.actief');
-  if(act && act.scrollIntoView) act.scrollIntoView({block:'nearest', inline:'nearest'});
+  if(act){                                   // alleen zijwaarts; scrollIntoView zou ook de vaste body kunnen verschuiven
+    const l = act.offsetLeft, r = l + act.offsetWidth;
+    if(l < vak.scrollLeft) vak.scrollLeft = l - 8;
+    else if(r > vak.scrollLeft + vak.clientWidth) vak.scrollLeft = r - vak.clientWidth + 8;
+  }
   el('kKleurPlus').disabled = doc.palet.length >= MAX_KLEUREN;
   el('kleurBol').style.background = doc.palet[doc.kleur];
   if(paneelActief==='kleur') kpStalenBij();
@@ -3932,7 +3936,20 @@ function dialoogSluit(){
   el('dialoog').classList.remove('open');
   const f = dialoogBijSluiten; dialoogBijSluiten = null;
   if(f) f();
+  herstelScroll();
 }
+
+function herstelScroll(){
+  let gedaan = false;
+  for(const e of [document.scrollingElement, document.documentElement, document.body, el('app')]){
+    if(e && (e.scrollTop || e.scrollLeft)){ e.scrollTop = 0; e.scrollLeft = 0; gedaan = true; }
+  }
+  if(window.scrollX || window.scrollY){ window.scrollTo(0, 0); gedaan = true; }
+  return gedaan;
+}
+document.addEventListener('focusout', ()=>{ setTimeout(herstelScroll, 60); setTimeout(herstelScroll, 400); });
+if(window.visualViewport) window.visualViewport.addEventListener('resize', ()=>setTimeout(herstelScroll, 60));
+document.addEventListener('pointerdown', ()=>{ if(!document.activeElement || !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) herstelScroll(); }, {capture:true, passive:true});
 el('dialoog').addEventListener('pointerdown', e=>{ if(e.target===el('dialoog')) dialoogSluit(); });
 function bevestig(tekst, okTekst){
   return new Promise(res=>{
@@ -6172,6 +6189,14 @@ async function zelftest(){
       const terug = doc.lagen.length===3 && doc.lagen[1].data===B;
       B.set(Bkopie); doc.vullingen = []; doc.actief = 1; maakVuilAlles(); verzekerComposiet();
       return r2 && r2.geheugen && n2===40*30 && terug;
+    });
+    await test('Scrollwacht: een verschoven vaste lay-out gaat terug naar 0', async ()=>{
+      const app = el('app'); document.body.scrollTop = 40; app.scrollTop = 30;
+      const voor = document.body.scrollTop + app.scrollTop;          // niet elke browser laat zich hier verschuiven
+      herstelScroll();
+      if(document.body.scrollTop || app.scrollTop || window.scrollY) return 'nog verschoven';
+      document.body.scrollTop = 40; dialoogOpen('proef', maak('div'), [{tekst:'Sluiten'}]); dialoogSluit();
+      return !document.body.scrollTop && (voor >= 0);
     });
     await test('Foutlog: meldingen komen in het logboek, tekst is deelbaar, wissen leegt het', async ()=>{
       const bewaar = localStorage.getItem(FOUTLOG_SLEUTEL); foutlogSchrijf([]); const gemeld = foutlogGemeld; foutlogGemeld = true;
